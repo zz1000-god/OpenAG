@@ -1,4 +1,5 @@
 #include <time.h>
+#include "hud_timer.h"
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
@@ -15,7 +16,7 @@
 #define CUSTOM_TIMER_B      0
 #define MAX_CUSTOM_TIMERS   4
 
-CON_COMMAND(customtimer, "Sets a timer to count down from N secs to zero")
+void CustomTimerCommandCallback()
 {
     CHudTimer::Get()->CustomTimerCommand();
 }
@@ -29,23 +30,26 @@ public:
         return &s_Timer;
     }
 
-    void Init()
-    {
-        BaseHudClass::Init();
+	void CHudTimer::Init()
+	{
+		BaseHudClass::Init();
 
-        HookMessage<&CHudTimer::MsgFunc_Timer>("Timer");
+		HookMessage<&CHudTimer::MsgFunc_Timer>("Timer");
 
-        m_iFlags |= HUD_ACTIVE;
+		m_iFlags |= HUD_ACTIVE;
 
-        m_pCvarHudTimer = gEngfuncs.pfnRegisterVariable("hud_timer", "1", FCVAR_BHL_ARCHIVE);
-        m_pCvarHudTimerSync = gEngfuncs.pfnRegisterVariable("hud_timer_sync", "1", FCVAR_BHL_ARCHIVE);
-        m_pCvarHudNextmap = gEngfuncs.pfnRegisterVariable("hud_nextmap", "1", FCVAR_BHL_ARCHIVE);
+		m_pCvarHudTimer = gEngfuncs.pfnRegisterVariable("hud_timer", "1", FCVAR_BHL_ARCHIVE);
+		m_pCvarHudTimerSync = gEngfuncs.pfnRegisterVariable("hud_timer_sync", "1", FCVAR_BHL_ARCHIVE);
+		m_pCvarHudNextmap = gEngfuncs.pfnRegisterVariable("hud_nextmap", "1", FCVAR_BHL_ARCHIVE);
 
-        memset(m_flCustomTimerStart, 0, sizeof(m_flCustomTimerStart));
-        memset(m_flCustomTimerEnd, 0, sizeof(m_flCustomTimerEnd));
-        memset(m_bCustomTimerNeedSound, 0, sizeof(m_bCustomTimerNeedSound));
-        m_szNextmap[0] = 0;
-    }
+		memset(m_flCustomTimerStart, 0, sizeof(m_flCustomTimerStart));
+		memset(m_flCustomTimerEnd, 0, sizeof(m_flCustomTimerEnd));
+		memset(m_bCustomTimerNeedSound, 0, sizeof(m_bCustomTimerNeedSound));
+		m_szNextmap[0] = 0;
+
+		// Register the command
+		gEngfuncs.pfnAddCommand("customtimer", CustomTimerCommandCallback);
+	}
 
     void VidInit()
     {
