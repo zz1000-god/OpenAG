@@ -141,9 +141,6 @@ float g_verticalBob;
 float m_flWeaponLag = 1.5f;
 
 
-ConVar cl_hl2_weaponlag("cl_hl2_weaponlag", "0", FCVAR_BHL_ARCHIVE, "Half-Life 2 weaponlag");
-ConVar cl_hl2_bob("cl_hl2_bob", "0", FCVAR_BHL_ARCHIVE, "Half-Life 2 bobbing");
-
 float V_CalcNewBob(struct ref_params_s *pparams)
 {
 	static float bobtime;
@@ -371,7 +368,7 @@ float V_CalcBob ( struct ref_params_s *pparams )
 	vel[2] = 0;
 	
 	if (cl_hl2_bob && cl_hl2_bob->value != 0.0f)
-		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * cl_bob->value;
+		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * cl_bob->value;
 	else
 		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * 0;
 
