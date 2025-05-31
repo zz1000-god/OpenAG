@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright � 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -28,6 +28,7 @@
 
 #ifdef _WIN32
 #include <process.h>
+#include <dinput.h>
 #endif
 
 #define MOUSE_BUTTON_COUNT 5
@@ -58,6 +59,19 @@ extern cvar_t *cl_sidespeed;
 extern cvar_t *cl_forwardspeed;
 extern cvar_t *cl_pitchspeed;
 extern cvar_t *cl_movespeedkey;
+
+static cvar_t* m_dinput = nullptr;
+
+static LPDIRECTINPUT8 g_pDI = nullptr;
+static LPDIRECTINPUTDEVICE8 g_pMouseDI = nullptr;
+static LPDIRECTINPUTDEVICE8 g_pJoystickDI = nullptr;
+static HWND g_hWnd = nullptr; // потрібно отримати handle вікна
+
+static bool g_bDirectInputMouse = false;
+static bool g_bDirectInputJoystick = false;
+
+static DIMOUSESTATE2 g_diMouseState;
+static DIJOYSTATE2 g_diJoyState;
 
 #ifdef _WIN32
 static double s_flRawInputUpdateTime = 0.0f;
@@ -167,6 +181,84 @@ HANDLE	s_hMouseQuitEvent = 0;
 HANDLE	s_hMouseThreadActiveLock = 0;
 #endif
 
+
+
+static bool DI_Init(HWND hwnd)
+{
+    HRESULT hr = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&g_pDI, NULL);
+    if (FAILED(hr)) return false;
+
+    // Mouse
+    hr = g_pDI->CreateDevice(GUID_SysMouse, &g_pMouseDI, NULL);
+    if (SUCCEEDED(hr))
+    {
+        g_pMouseDI->SetDataFormat(&c_dfDIMouse2);
+        g_pMouseDI->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+        g_pMouseDI->Acquire();
+        g_bDirectInputMouse = true;
+    }
+
+    // Joystick (приклад для першого знайденого)
+    hr = g_pDI->CreateDevice(GUID_Joystick, &g_pJoystickDI, NULL);
+    if (SUCCEEDED(hr))
+    {
+        g_pJoystickDI->SetDataFormat(&c_dfDIJoystick2);
+        g_pJoystickDI->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+        g_pJoystickDI->Acquire();
+        g_bDirectInputJoystick = true;
+    }
+
+    return true;
+}
+static void DI_Shutdown()
+{
+    if (g_pMouseDI) { g_pMouseDI->Unacquire(); g_pMouseDI->Release(); g_pMouseDI = nullptr; }
+    if (g_pJoystickDI) { g_pJoystickDI->Unacquire(); g_pJoystickDI->Release(); g_pJoystickDI = nullptr; }
+    if (g_pDI) { g_pDI->Release(); g_pDI = nullptr; }
+    g_bDirectInputMouse = false;
+    g_bDirectInputJoystick = false;
+}
+
+static bool DI_GetMouseDelta(int* dx, int* dy, int* dz, DWORD* buttons)
+{
+    if (!g_bDirectInputMouse) return false;
+    HRESULT hr = g_pMouseDI->Poll();
+    if (FAILED(hr))
+    {
+        g_pMouseDI->Acquire();
+        hr = g_pMouseDI->Poll();
+        if (FAILED(hr)) return false;
+    }
+    hr = g_pMouseDI->GetDeviceState(sizeof(g_diMouseState), &g_diMouseState);
+    if (FAILED(hr)) return false;
+
+    if (dx) *dx = g_diMouseState.lX;
+    if (dy) *dy = g_diMouseState.lY;
+    if (dz) *dz = g_diMouseState.lZ;
+    if (buttons)
+    {
+        *buttons = 0;
+        for (int i = 0; i < 8; ++i)
+            if (g_diMouseState.rgbButtons[i] & 0x80)
+                *buttons |= (1 << i);
+    }
+    return true;
+}
+static bool DI_GetJoystickState(DIJOYSTATE2* outState)
+{
+    if (!g_bDirectInputJoystick) return false;
+    HRESULT hr = g_pJoystickDI->Poll();
+    if (FAILED(hr))
+    {
+        g_pJoystickDI->Acquire();
+        hr = g_pJoystickDI->Poll();
+        if (FAILED(hr)) return false;
+    }
+    hr = g_pJoystickDI->GetDeviceState(sizeof(g_diJoyState), &g_diJoyState);
+    if (FAILED(hr)) return false;
+    if (outState) *outState = g_diJoyState;
+    return true;
+}
 /*
 ===========
 Force_CenterView_f
@@ -402,6 +494,15 @@ void IN_StartupMouse (void)
 			newmouseparms[1] = originalmouseparms[1];
 			newmouseparms[2] = originalmouseparms[2];
 		}
+
+		if (m_dinput && m_dinput->value != 0)
+    	{
+        // Отримати HWND через движок (або зберегти при старті)
+        if (!g_hWnd && gEngfuncs.GetMainWindow)
+            g_hWnd = (HWND)gEngfuncs.GetMainWindow();
+        if (g_hWnd)
+            DI_Init(g_hWnd);
+    	}
 	}
 #endif
 	
@@ -422,6 +523,9 @@ void IN_Shutdown (void)
 	{
 		SetEvent( s_hMouseQuitEvent );
 	}
+
+	if (m_dinput && m_dinput->value != 0)
+    DI_Shutdown();
 	
 	if ( s_hMouseThread )
 	{
@@ -575,11 +679,32 @@ void IN_ScaleMouse( float *x, float *y )
 void IN_GetMouseDelta( int *pOutX, int *pOutY)
 {
 	bool active = mouseactive && !iVisibleMouse;
-	int mx, my;
+    int mx = 0, my = 0;
 
 	if(active)
 	{
 		int deltaX, deltaY;
+#ifdef _WIN32
+    if (m_dinput && m_dinput->value != 0 && g_bDirectInputMouse)
+    {
+        int dx = 0, dy = 0, dz = 0;
+        DWORD buttons = 0;
+        if (DI_GetMouseDelta(&dx, &dy, &dz, &buttons))
+        {
+            mx = dx + mx_accum;
+            my = dy + my_accum;
+            mx_accum = 0;
+            my_accum = 0;
+        }
+        else
+        {
+            mx = my = 0;
+        }
+        // Можна також викликати IN_ResetMouse() якщо потрібно
+    }
+    else
+#endif
+
 #ifdef _WIN32
 		if ( !m_bRawInput )
 		{
@@ -825,6 +950,17 @@ IN_StartupJoystick
 =============== 
 */  
 void IN_StartupJoystick (void) 
+
+#ifdef _WIN32
+    if (m_dinput && m_dinput->value != 0)
+    {
+        if (!g_hWnd && gEngfuncs.GetMainWindow)
+            g_hWnd = (HWND)gEngfuncs.GetMainWindow();
+        if (g_hWnd)
+            DI_Init(g_hWnd);
+    }
+#endif
+
 { 
 	// abort startup if user requests no joystick
 	if ( gEngfuncs.CheckParm ("-nojoy", NULL ) ) 
@@ -1036,6 +1172,26 @@ IN_JoyMove
 */
 void IN_JoyMove ( float frametime, usercmd_t *cmd )
 {
+
+#ifdef _WIN32
+    if (m_dinput && m_dinput->value != 0 && g_bDirectInputJoystick)
+    {
+        DIJOYSTATE2 js;
+        if (DI_GetJoystickState(&js))
+        {
+            // Тут потрібно розпарсити js.lX, js.lY, js.lZ, js.lRx, js.lRy, js.lRz, js.rgbButtons і т.д.
+            // і застосувати до cmd та viewangles аналогічно SDL-джойстику.
+            // Наприклад:
+            float fAxisValue;
+            // X/Y axes
+            fAxisValue = (float)js.lX / 32768.0f;
+            // ... і далі як у вашому коді
+            // (Реалізацію можна розширити за потреби)
+        }
+        return;
+    }
+#endif
+
 	float	speed, aspeed;
 	float	fAxisValue, fTemp;
 	int		i;
@@ -1270,6 +1426,8 @@ void IN_Init (void)
 	m_bRawInput				= CVAR_GET_FLOAT( "m_rawinput" ) != 0;
 	m_bMouseThread			= gEngfuncs.CheckParm ("-mousethread", NULL ) != NULL;
 	m_mousethread_sleep		= gEngfuncs.pfnRegisterVariable ( "m_mousethread_sleep", "1", FCVAR_ARCHIVE ); // default to less than 1000 Hz
+
+	m_dinput = gEngfuncs.pfnRegisterVariable("m_dinput", "0", FCVAR_ARCHIVE);
 
 	m_bMouseThread = m_bMouseThread && NULL != m_mousethread_sleep;
 
