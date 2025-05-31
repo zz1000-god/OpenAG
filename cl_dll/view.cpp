@@ -847,7 +847,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	}
 
 	// Let the viewmodel shake at about 10% of the amplitude
-	if (cl_hl2_bob.GetBool())
+	if (cl_hl2_bob && cl_hl2_bob->value != 0.0f)
 	{
 		Vector forward, right;
 		AngleVectors(view->angles, forward, right, NULL);
