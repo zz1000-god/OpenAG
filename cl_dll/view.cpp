@@ -212,64 +212,55 @@ V_CalcViewModelLag
 */
 void V_CalcViewModelLag(ref_params_t *pparams, Vector &origin, Vector &angles, Vector original_angles)
 {
-	static Vector m_vecLastFacing;
-	Vector vOriginalOrigin = origin;
-	Vector vOriginalAngles = angles;
+    Vector vOriginalOrigin = origin;
+    Vector vOriginalAngles = angles;
 
-	// Calculate our drift
-	Vector forward, right, up;
-	AngleVectors(angles, forward, right, up);
+    // Переконайтесь, що weaponlag активний
+    if (m_flWeaponLag <= 0.0f)
+        m_flWeaponLag = 1.5f;
 
-	if (pparams->frametime != 0.0f) // not in paused
-	{
-		Vector vDifference;
+    // Calculate our drift
+    Vector forward, right, up;
+    AngleVectors(angles, forward, right, up);
 
-		vDifference = forward - m_vecLastFacing;
+    if (pparams->frametime != 0.0f) // not in paused
+    {
+        Vector vDifference;
+        vDifference = forward - m_vecLastFacing;
 
-		float flSpeed = 5.0f;
+        float flSpeed = 5.0f;
 
-		// If we start to lag too far behind, we'll increase the "catch up" speed.
-		// Solves the problem with fast cl_yawspeed, m_yaw or joysticks rotating quickly.
-		// The old code would slam lastfacing with origin causing the viewmodel to pop to a new position
-		float flDiff = vDifference.Length();
-		if ((flDiff > m_flWeaponLag) && (m_flWeaponLag > 0.0f))
-		{
-			float flScale = flDiff / m_flWeaponLag;
-			flSpeed *= flScale;
-		}
+        // If we start to lag too far behind, we'll increase the "catch up" speed.
+        float flDiff = vDifference.Length();
+        if ((flDiff > m_flWeaponLag) && (m_flWeaponLag > 0.0f))
+        {
+            float flScale = flDiff / m_flWeaponLag;
+            flSpeed *= flScale;
+        }
 
-		float len = m_vecLastFacing.Length();
-		if (len != 0.0f)
-			m_vecLastFacing = m_vecLastFacing / len;
-		else
-			m_vecLastFacing = Vector(0,0,1);
-	}
+        // Interpolate facing direction
+        VectorMA(m_vecLastFacing, pparams->frametime * flSpeed, vDifference, m_vecLastFacing);
+        
+        // Normalize
+        float len = m_vecLastFacing.Length();
+        if (len > 0.0f)
+            m_vecLastFacing = m_vecLastFacing * (1.0f / len);
+        else
+            m_vecLastFacing = Vector(1, 0, 0);
+    }
 
-	AngleVectors(original_angles, forward, right, up);
+    AngleVectors(original_angles, forward, right, up);
 
-	float pitch = original_angles[PITCH];
+    float pitch = original_angles[PITCH];
+    if (pitch > 180.0f)
+        pitch -= 360.0f;
+    else if (pitch < -180.0f)
+        pitch += 360.0f;
 
-	if (pitch > 180.0f)
-	{
-		pitch -= 360.0f;
-	}
-	else if (pitch < -180.0f)
-	{
-		pitch += 360.0f;
-	}
-
-	if (m_flWeaponLag <= 0.0f)
-	{
-		origin = vOriginalOrigin;
-		angles = vOriginalAngles;
-	}
-	else
-	{
-		// FIXME: These are the old settings that caused too many exposed polys on some models
-		origin = origin + forward * (-pitch * 0.015f);
-		origin = origin + right * (-pitch * 0.01f);
-		origin = origin + up * (-pitch * 0.005f);
-	}
+    // Apply weapon lag effect
+    origin = origin + forward * (-pitch * 0.015f);
+    origin = origin + right * (-pitch * 0.01f);
+    origin = origin + up * (-pitch * 0.005f);
 }
 
 //=============================================================================
