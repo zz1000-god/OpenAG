@@ -883,7 +883,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 		view->angles[ROLL] -= bob * 1;
 		view->angles[PITCH] -= bob * 0.3;
 
-		if (cl_bob_angled.GetBool())
+		if (cl_bob_angled && cl_bob_angled->value != 0.0f)
 		{
 			view->curstate.angles = view->angles;
 		}
