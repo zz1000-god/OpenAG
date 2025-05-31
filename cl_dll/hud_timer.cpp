@@ -99,3 +99,5 @@ int CHudTimer::MsgFunc_Timer(const char* name, int size, void* buf)
 
 	return 1;
 }
+
+DEFINE_HUD_ELEM(CHudTimer);
