@@ -28,7 +28,9 @@
 
 #ifdef _WIN32
 #include <process.h>
+#define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
+#include <SDL2/SDL_syswm.h>
 #endif
 
 #define MOUSE_BUTTON_COUNT 5
@@ -181,7 +183,14 @@ HANDLE	s_hMouseQuitEvent = 0;
 HANDLE	s_hMouseThreadActiveLock = 0;
 #endif
 
-
+HWND GetSDLWindowHandle()
+{
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (SDL_GetWindowWMInfo(SDL_GL_GetCurrentWindow(), &info))
+        return info.info.win.window;
+    return nullptr;
+}
 
 static bool DI_Init(HWND hwnd)
 {
@@ -954,8 +963,8 @@ void IN_StartupJoystick (void)
 #ifdef _WIN32
     if (m_dinput && m_dinput->value != 0)
     {
-        if (!g_hWnd && gEngfuncs.GetMainWindow)
-            g_hWnd = (HWND)gEngfuncs.GetMainWindow();
+        if (!g_hWnd)
+            g_hWnd = GetSDLWindowHandle();
         if (g_hWnd)
             DI_Init(g_hWnd);
     }
