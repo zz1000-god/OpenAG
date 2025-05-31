@@ -1993,6 +1993,9 @@ void V_Init (void)
 
 	cl_hl2_weaponlag = gEngfuncs.pfnRegisterVariable("cl_hl2_weaponlag", "0", FCVAR_ARCHIVE);
 	cl_hl2_bob = gEngfuncs.pfnRegisterVariable("cl_hl2_bob", "0", FCVAR_ARCHIVE);
+
+	m_flWeaponLag = 1.5f; 
+	static Vector m_vecLastFacing(1, 0, 0); // Додайте ініціалізацію
 }
 
 
