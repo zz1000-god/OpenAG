@@ -139,6 +139,7 @@ inline float RemapVal(float val, float A, float B, float C, float D) {
 float g_lateralBob;
 float g_verticalBob;
 float m_flWeaponLag = 1.5f;
+static Vector m_vecLastFacing(1, 0, 0);
 
 
 float V_CalcNewBob(struct ref_params_s *pparams)
@@ -1986,7 +1987,6 @@ void V_Init (void)
 	cl_hl2_bob = gEngfuncs.pfnRegisterVariable("cl_hl2_bob", "0", FCVAR_ARCHIVE);
 
 	m_flWeaponLag = 1.5f; 
-	static Vector m_vecLastFacing(1, 0, 0); // Додайте ініціалізацію
 }
 
 
