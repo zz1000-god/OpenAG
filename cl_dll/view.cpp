@@ -876,7 +876,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	view->origin[2] -= 1;
 	
 	if (cl_hl2_weaponlag && cl_hl2_weaponlag->value != 0.0f)
-		V_CalcViewModelLag(pparams, view->origin, view->angles, pparams->viewangles);
+    V_CalcViewModelLag(pparams, view->origin, view->angles, pparams->viewangles);
 
 	// fudge position around to keep amount of weapon visible
 	// roughly equal with different FOV
