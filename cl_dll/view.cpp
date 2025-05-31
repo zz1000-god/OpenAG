@@ -99,6 +99,9 @@ cvar_t	*cl_chasedist;
 cvar_t	*cl_viewmodel_ofs_right;
 cvar_t	*cl_viewmodel_ofs_forward;
 cvar_t	*cl_viewmodel_ofs_up;
+cvar_t* cl_hl2_weaponlag = nullptr;
+cvar_t* cl_hl2_bob = nullptr;
+
 
 // These cvars are not registered (so users can't cheat), so set the ->value field directly
 // Register these cvars in V_Init() if needed for easy tweaking
@@ -238,11 +241,11 @@ void V_CalcViewModelLag(ref_params_t *pparams, Vector &origin, Vector &angles, V
 			flSpeed *= flScale;
 		}
 
-		// FIXME:  Needs to be predictable?
-		m_vecLastFacing = m_vecLastFacing + vDifference * (flSpeed * pparams->frametime);
-		// Make sure it doesn't grow out of control!!!
-		m_vecLastFacing = m_vecLastFacing.Normalized();
-		origin = origin + (vDifference * -1.0f) * 5.0f;
+		float len = m_vecLastFacing.Length();
+		if (len != 0.0f)
+			m_vecLastFacing = m_vecLastFacing / len;
+		else
+			m_vecLastFacing = Vector(0,0,1);
 	}
 
 	AngleVectors(original_angles, forward, right, up);
@@ -367,8 +370,8 @@ float V_CalcBob ( struct ref_params_s *pparams )
 	VectorCopy( pparams->simvel, vel );
 	vel[2] = 0;
 	
-	if (!cl_hl2_bob.GetBool())
-		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * cvar_bob;
+	if (cl_hl2_bob && cl_hl2_bob->value != 0.0f)
+		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * cl_bob->value;
 	else
 		bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * 0;
 
@@ -895,7 +898,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	// with view model distortion, this may be a cause. (SJB). 
 	view->origin[2] -= 1;
 	
-	if (cl_hl2_weaponlag.GetBool())
+	if (cl_hl2_weaponlag && cl_hl2_weaponlag->value != 0.0f)
 		V_CalcViewModelLag(pparams, view->origin, view->angles, pparams->viewangles);
 
 	// fudge position around to keep amount of weapon visible
@@ -1990,6 +1993,9 @@ void V_Init (void)
 	cl_viewmodel_ofs_right		= gEngfuncs.pfnRegisterVariable( "cl_viewmodel_ofs_right","0", FCVAR_ARCHIVE ); // x = right
 	cl_viewmodel_ofs_forward	= gEngfuncs.pfnRegisterVariable( "cl_viewmodel_ofs_forward","0", FCVAR_ARCHIVE ); // y = forward
 	cl_viewmodel_ofs_up		    = gEngfuncs.pfnRegisterVariable( "cl_viewmodel_ofs_up","0", FCVAR_ARCHIVE ); // z = up
+
+	cl_hl2_weaponlag = gEngfuncs.pfnRegisterVariable("cl_hl2_weaponlag", "0", FCVAR_ARCHIVE);
+	cl_hl2_bob = gEngfuncs.pfnRegisterVariable("cl_hl2_bob", "0", FCVAR_ARCHIVE);
 }
 
 
