@@ -213,36 +213,26 @@ V_CalcViewModelLag
 */
 void V_CalcViewModelLag(ref_params_t *pparams, Vector &origin, Vector &angles, Vector original_angles)
 {
-    Vector vOriginalOrigin = origin;
-    Vector vOriginalAngles = angles;
-
-    // Переконайтесь, що weaponlag активний
     if (m_flWeaponLag <= 0.0f)
-        m_flWeaponLag = 1.5f;
+        return;
 
-    // Calculate our drift
     Vector forward, right, up;
     AngleVectors(angles, forward, right, up);
 
-    if (pparams->frametime != 0.0f) // not in paused
+    if (pparams->frametime != 0.0f)
     {
-        Vector vDifference;
-        vDifference = forward - m_vecLastFacing;
-
+        Vector vDifference = forward - m_vecLastFacing;
         float flSpeed = 5.0f;
 
-        // If we start to lag too far behind, we'll increase the "catch up" speed.
         float flDiff = vDifference.Length();
-        if ((flDiff > m_flWeaponLag) && (m_flWeaponLag > 0.0f))
+        if (flDiff > m_flWeaponLag && m_flWeaponLag > 0.0f)
         {
             float flScale = flDiff / m_flWeaponLag;
             flSpeed *= flScale;
         }
 
-        // Interpolate facing direction
         VectorMA(m_vecLastFacing, pparams->frametime * flSpeed, vDifference, m_vecLastFacing);
         
-        // Normalize
         float len = m_vecLastFacing.Length();
         if (len > 0.0f)
             m_vecLastFacing = m_vecLastFacing * (1.0f / len);
@@ -250,18 +240,16 @@ void V_CalcViewModelLag(ref_params_t *pparams, Vector &origin, Vector &angles, V
             m_vecLastFacing = Vector(1, 0, 0);
     }
 
-    AngleVectors(original_angles, forward, right, up);
-
-    float pitch = original_angles[PITCH];
-    if (pitch > 180.0f)
-        pitch -= 360.0f;
-    else if (pitch < -180.0f)
-        pitch += 360.0f;
-
-    // Apply weapon lag effect
-    origin = origin + forward * (-pitch * 0.015f);
-    origin = origin + right * (-pitch * 0.01f);
-    origin = origin + up * (-pitch * 0.005f);
+    // Застосовуємо lag на основі різниці векторів
+    Vector lagDifference = forward - m_vecLastFacing;
+    
+    origin = origin + right * (lagDifference[0] * 2.0f);
+    origin = origin + up * (lagDifference[1] * 2.0f);
+    origin = origin + forward * (lagDifference[2] * 1.0f);
+    
+    angles[PITCH] += lagDifference[1] * 0.5f;
+    angles[YAW] += lagDifference[0] * 0.5f;
+    angles[ROLL] += lagDifference[0] * 0.25f;
 }
 
 //=============================================================================
