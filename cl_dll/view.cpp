@@ -116,6 +116,22 @@ float	v_idlescale;  // used by TFC for concussion grenade effect
 #define HL2_BOB           0.002f
 #define HL2_BOB_UP        0.5f
 
+inline float clamp(float v, float minVal, float maxVal) {
+    if (v < minVal) return minVal;
+    if (v > maxVal) return maxVal;
+    return v;
+}
+inline float RemapVal(float val, float A, float B, float C, float D) {
+    if (A == B) return C;
+    return C + (D - C) * (val - A) / (B - A);
+}
+#ifndef min
+#define min(a,b) (((a)<(b))?(a):(b))
+#endif
+#ifndef max
+#define max(a,b) (((a)>(b))?(a):(b))
+#endif
+
 
 float g_lateralBob;
 float g_verticalBob;
