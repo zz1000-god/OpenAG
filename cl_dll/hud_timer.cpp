@@ -16,6 +16,13 @@
 #define CUSTOM_TIMER_B      0
 #define MAX_CUSTOM_TIMERS   4
 
+DEFINE_HUD_ELEM(CHudTimer);
+
+CHudTimer* CHudTimer::Get()
+{
+    static CHudTimer s_Timer;
+    return &s_Timer;
+}
 void CustomTimerCommandCallback()
 {
     CHudTimer::Get()->CustomTimerCommand();
@@ -24,15 +31,10 @@ void CustomTimerCommandCallback()
 class CHudTimer : public BaseHudClass
 {
 public:
-    static CHudTimer* Get()
-    {
-        static CHudTimer s_Timer;
-        return &s_Timer;
-    }
 
 	void CHudTimer::Init()
 	{
-		BaseHudClass::Init();
+		CHudBase::Init();
 
 		HookMessage<&CHudTimer::MsgFunc_Timer>("Timer");
 
