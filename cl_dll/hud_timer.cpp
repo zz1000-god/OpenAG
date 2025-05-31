@@ -1,44 +1,27 @@
-// hud_timer.cpp
-
-#include "hud.h"
+#include "hud_timer.h"
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "discord_integration.h"
 
 DECLARE_MESSAGE(m_Timer, Timer);
 
-class CHudTimer : public CHudBase
+void CHudTimer::unpack_seconds(int seconds_total, int& days, int& hours, int& minutes, int& seconds)
 {
-public:
-    int Init() override;
-    int VidInit() override;
-    int Draw(float time) override;
-    int MsgFunc_Timer(const char* name, int size, void* buf);
+    constexpr int SECONDS_PER_MINUTE = 60;
+    constexpr int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
+    constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
 
-private:
-    float draw_until = 0.0f;
-    int seconds_total = 0;
-    int seconds_passed = 0;
-    cvar_t* hud_timer = nullptr;
+    days = seconds_total / SECONDS_PER_DAY;
+    seconds_total %= SECONDS_PER_DAY;
 
-    static void unpack_seconds(int seconds_total, int& days, int& hours, int& minutes, int& seconds)
-    {
-        constexpr int SECONDS_PER_MINUTE = 60;
-        constexpr int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
-        constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
+    hours = seconds_total / SECONDS_PER_HOUR;
+    seconds_total %= SECONDS_PER_HOUR;
 
-        days = seconds_total / SECONDS_PER_DAY;
-        seconds_total %= SECONDS_PER_DAY;
+    minutes = seconds_total / SECONDS_PER_MINUTE;
+    seconds_total %= SECONDS_PER_MINUTE;
 
-        hours = seconds_total / SECONDS_PER_HOUR;
-        seconds_total %= SECONDS_PER_HOUR;
-
-        minutes = seconds_total / SECONDS_PER_MINUTE;
-        seconds_total %= SECONDS_PER_MINUTE;
-
-        seconds = seconds_total;
-    }
-};
+    seconds = seconds_total;
+}
 
 int CHudTimer::Init()
 {
@@ -87,7 +70,6 @@ int CHudTimer::Draw(float time)
     else if (seconds_to_draw >= 0)
         sprintf(str, "%d", seconds);
     else
-        // Overtime!
         sprintf(str, "%d", seconds_to_draw);
 
     int r, g, b;
