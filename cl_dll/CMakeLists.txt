@@ -135,5 +135,6 @@ add_sources(
 	vgui_UnicodeTextImage.h
 	view.cpp
 	view.h
+	net.h
 	voice_status.cpp
 	wrect.h)
