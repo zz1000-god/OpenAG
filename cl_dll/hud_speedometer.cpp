@@ -43,7 +43,7 @@ int CHudSpeedometer::Draw(float time)
 		if (hud_jumpspeed && hud_jumpspeed->value == 0.0f)
 		{
 			// Якщо jumpspeed вимкнений, прижимаємо спідометр до самого низу
-			y = ScreenHeight - gHUD.m_iFontHeight / 2;
+			y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 		}
 		else
 		{
