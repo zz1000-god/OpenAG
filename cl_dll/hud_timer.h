@@ -9,6 +9,7 @@ public:
 
 	int MsgFunc_Timer(const char* name, int size, void* buf);
 	void Think();
+	void SyncTimerLocal(float fTime);
 
 private:
 	void SyncTimer(float fTime);
@@ -19,12 +20,24 @@ private:
 	int seconds_passed;
 	float draw_until;
 	
+	
 	// Sync data
 	float m_flEndTime;
 	float m_flEffectiveTime;
 	float m_flNextSyncTime;
 	bool m_flSynced;
 	bool m_bDelayTimeleftReading;
+	float m_flDemoSyncTime;
+	bool m_bDemoSyncTimeValid;
+	bool m_bDelayTimeleftReading;
+	float m_flCustomTimerStart[MAX_CUSTOM_TIMERS];
+	float m_flCustomTimerEnd[MAX_CUSTOM_TIMERS];
+	bool m_bCustomTimerNeedSound[MAX_CUSTOM_TIMERS];
+	int m_eAgVersion;
+	char m_szNextmap[MAX_MAP_NAME];
+	bool m_bNeedWriteTimer;
+	bool m_bNeedWriteCustomTimer;
+	bool m_bNeedWriteNextmap;
 	
 	// CVars
 	cvar_t* hud_timer;
