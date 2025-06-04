@@ -2,8 +2,6 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "hud_timer.h"
-#include "net.h"
-#include "net_api.h"
 #include "discord_integration.h"
 #include <ctime>
 
@@ -266,61 +264,7 @@ void CHudTimer::SyncTimerLocal(float fTime)
 			m_bNeedWriteTimer = true;
 	}
 }
-void CHudTimer::SyncTimer(float fTime)
-{
-	if (gEngfuncs.pDemoAPI->IsPlayingback())
-		return;
 
-	if ((int)m_pCvarHudTimerSync->value == 0)
-	{
-		m_flSynced = false;
-		return;
-	}
-
-	// Make sure networking system has started.
-	NET_API->InitNetworking();
-	// Get net status
-	net_status_t status;
-	NET_API->Status(&status);
-	if (status.connected)
-	{
-		if (status.remote_address.type == NA_IP)
-		{
-			SyncTimerRemote(*(unsigned int *)status.remote_address.ip, status.remote_address.port, fTime, status.latency);
-			if (g_eRulesRequestStatus == SOCKET_AWAITING_CODE || g_eRulesRequestStatus == SOCKET_AWAITING_ANSWER)
-				return;
-		}
-		else if (status.remote_address.type == NA_LOOPBACK)
-		{
-			SyncTimerLocal(fTime);
-			m_flNextSyncTime = fTime + 5;
-		}
-		else
-		{
-			m_flNextSyncTime = fTime + 1;
-		}
-
-		if (m_bDelayTimeleftReading)
-		{
-			m_bDelayTimeleftReading = false;
-			// We are not synced via timeleft because it has a delay when server set it after mp_timelimit changed
-			// So do an update soon
-			m_flNextSyncTime = fTime + 1.5;
-		}
-	}
-	else
-	{
-		// Close socket if we are not connected anymore
-		if (g_timerSocket != NULL)
-		{
-			NetCloseSocket(g_timerSocket);
-			g_timerSocket = NULL;
-			g_eRulesRequestStatus = SOCKET_NONE;
-		}
-
-		m_flNextSyncTime = fTime + 1;
-	}
-};
 
 void CHudTimer::DoResync()
 {
