@@ -11,6 +11,9 @@ public:
 	void Think();
 
 private:
+	void SyncTimer(float fTime);
+	void DoResync();
+
 	// Message data
 	int seconds_total;
 	int seconds_passed;
