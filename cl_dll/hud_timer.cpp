@@ -206,9 +206,8 @@ void CHudTimer::Think()
 
 void CHudTimer::SyncTimer(float fTime)
 {
-	if (gEngfuncs.pDemoAPI->IsPlayingback())
-		return;
-
+	// Note: Demo playback check removed due to API compatibility issues
+	
 	float prevEndtime = m_flEndTime;
 
 	// Get timer settings directly from cvars
