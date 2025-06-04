@@ -1,7 +1,95 @@
+#include "hud.h"
+#include "cl_util.h"
+#include "parsemsg.h"
+#include "hud_timer.h"
+#include "discord_integration.h"
+#include <ctime>
+
+DECLARE_MESSAGE(m_Timer, Timer);
+
+static void unpack_seconds(int seconds_total, int& days, int& hours, int& minutes, int& seconds)
+{
+	constexpr int SECONDS_PER_MINUTE = 60;
+	constexpr int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
+	constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
+
+	days = seconds_total / SECONDS_PER_DAY;
+	seconds_total %= SECONDS_PER_DAY;
+
+	hours = seconds_total / SECONDS_PER_HOUR;
+	seconds_total %= SECONDS_PER_HOUR;
+
+	minutes = seconds_total / SECONDS_PER_MINUTE;
+	seconds_total %= SECONDS_PER_MINUTE;
+
+	seconds = seconds_total;
+}
+
+int CHudTimer::Init()
+{
+	HOOK_MESSAGE(Timer);
+	m_iFlags |= HUD_ACTIVE;
+	
+	hud_timer = CVAR_CREATE("hud_timer", "1", FCVAR_ARCHIVE);
+	m_pCvarHudTimerSync = CVAR_CREATE("hud_timer_sync", "1", FCVAR_ARCHIVE);
+	gHUD.AddHudElem(this);
+	
+	// Initialize member variables
+	seconds_total = 0;
+	seconds_passed = 0;
+	draw_until = 0.0f;
+	
+	// Initialize sync variables
+	m_flEndTime = 0.0f;
+	m_flEffectiveTime = 0.0f;
+	m_flNextSyncTime = 0.0f;
+	m_flSynced = false;
+	m_bDelayTimeleftReading = true;
+	
+	return 1;
+}
+
+int CHudTimer::VidInit()
+{
+	// Don't disable HUD_ACTIVE here - let it stay active for local time display
+	// m_iFlags &= ~HUD_ACTIVE;
+	
+	// Get pointers to server cvars
+	m_pCvarMpTimelimit = gEngfuncs.pfnGetCvarPointer("mp_timelimit");
+	m_pCvarMpTimeleft = gEngfuncs.pfnGetCvarPointer("mp_timeleft");
+	
+	// Reset sync state
+	m_flEndTime = 0.0f;
+	m_flEffectiveTime = 0.0f;
+	m_flNextSyncTime = 0.0f;
+	m_flSynced = false;
+	m_bDelayTimeleftReading = true;
+	
+	return 1;
+}
+
 int CHudTimer::Draw(float time)
 {
 	if (gHUD.m_iHideHUDDisplay & HIDEHUD_ALL)
 		return 0;
+
+	// Handle local time display (hud_timer = 3)
+	if (hud_timer->value == 3.0f) {
+		time_t rawtime;
+		struct tm* timeinfo;
+		char str[64];
+		
+		::time(&rawtime);
+		timeinfo = ::localtime(&rawtime);
+		
+		// Format: HH:MM:SS
+		sprintf(str, "%02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		
+		int r, g, b;
+		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
+		gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
+		return 1;
+	}
 
 	// Handle message-based timer
 	if (gHUD.m_flTime < draw_until) {
@@ -33,30 +121,8 @@ int CHudTimer::Draw(float time)
 		return 1;
 	}
 	
-	// Handle local time display (hud_timer = 3)
-	if (hud_timer->value == 3.0f) {
-		time_t rawtime;
-		struct tm* timeinfo;
-		char str[64];
-		
-		time(&rawtime);
-		timeinfo = localtime(&rawtime);
-		
-		// Format: HH:MM:SS
-		sprintf(str, "%02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-		
-		int r, g, b;
-		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-		gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-		return 1;
-	}
-	
 	// Handle synced timer when no message timer is active
-	if (hud_timer->value == 0.0f)
-		return 0;
-
-	// For values 1 and 2, we need either synced timer or message timer
-	if (!m_flSynced && gHUD.m_flTime >= draw_until)
+	if (hud_timer->value == 0.0f || !m_flSynced)
 		return 0;
 
 	float timeleft = m_flSynced ? (m_flEndTime - time) : (m_flEndTime - m_flEffectiveTime);
@@ -100,6 +166,42 @@ int CHudTimer::Draw(float time)
 	gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
 
 	return 1;
+}
+
+int CHudTimer::MsgFunc_Timer(const char* name, int size, void* buf)
+{
+	BEGIN_READ(buf, size);
+	int timelimit = READ_LONG();
+	int effectiveTime = READ_LONG();
+
+	// Update message-based timer data
+	seconds_total = timelimit;
+	seconds_passed = effectiveTime;
+	draw_until = gHUD.m_flTime + 5.0f;
+	m_iFlags |= HUD_ACTIVE;
+
+	// Also update sync data if not already synced
+	if (!m_flSynced)
+	{
+		m_flEndTime = timelimit;
+		m_flEffectiveTime = effectiveTime;
+	}
+
+	discord_integration::set_time_data(seconds_total, seconds_passed);
+	return 1;
+}
+
+void CHudTimer::Think()
+{
+	float flTime = gEngfuncs.GetClientTime();
+	
+	// Check for time reset
+	if (m_flNextSyncTime - flTime > 60)
+		m_flNextSyncTime = flTime;
+		
+	// Do sync if enabled
+	if (m_pCvarHudTimerSync->value > 0 && m_flNextSyncTime <= flTime)
+		SyncTimer(flTime);
 }
 
 void CHudTimer::SyncTimer(float fTime)
@@ -146,23 +248,4 @@ void CHudTimer::DoResync()
 	m_bDelayTimeleftReading = true;
 	m_flNextSyncTime = 0;
 	m_flSynced = false;
-}
-
-int CHudTimer::VidInit()
-{
-	// Don't disable HUD_ACTIVE here - let it stay active
-	// m_iFlags &= ~HUD_ACTIVE;
-	
-	// Get pointers to server cvars
-	m_pCvarMpTimelimit = gEngfuncs.pfnGetCvarPointer("mp_timelimit");
-	m_pCvarMpTimeleft = gEngfuncs.pfnGetCvarPointer("mp_timeleft");
-	
-	// Reset sync state
-	m_flEndTime = 0.0f;
-	m_flEffectiveTime = 0.0f;
-	m_flNextSyncTime = 0.0f;
-	m_flSynced = false;
-	m_bDelayTimeleftReading = true;
-	
-	return 1;
 }
