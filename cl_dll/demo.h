@@ -1,11 +1,11 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================
 
-#if !defined( DEMOH )
+#if !defined(DEMOH)
 #define DEMOH
 #pragma once
 
@@ -13,10 +13,15 @@
 enum
 {
 	TYPE_SNIPERDOT = 0,
-	TYPE_ZOOM
+	TYPE_ZOOM,
+	TYPE_TIME,
+	TYPE_TIMER,
+	TYPE_CUSTOM_TIMER,
+	TYPE_NEXTMAP,
+	TYPE_SVC_STATUS, //!< CSvcMessages::SendStatusRequest
 };
 
-void Demo_WriteBuffer( int type, int size, unsigned char *buffer );
+void Demo_WriteBuffer(int type, int size, unsigned char *buffer);
 
 extern int g_demosniper;
 extern int g_demosniperdamage;
