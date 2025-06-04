@@ -892,7 +892,8 @@ int CHudAmmo::Draw(float flTime)
 		}
 
 		SPR_Set(m_pWeapon->hInactive, r, g, b);
-		int offset = (m_pWeapon->rcInactive.bottom - m_pWeapon->rcInactive.top) / 8;
+		int spriteHeight = m_pWeapon->rcInactive.bottom - m_pWeapon->rcInactive.top;
+		int offset = spriteHeight - (spriteHeight / 8);
 		SPR_DrawAdditive(0, ScreenWidth / 1.73, y - offset, &m_pWeapon->rcInactive);
 	}
 
