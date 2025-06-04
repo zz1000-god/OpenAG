@@ -18,6 +18,16 @@ jobs:
     - name: Build
       run: cmake --build build --config Release
 
+    - name: Debug
+      run: cmake --build build -j $env:NUMBER_OF_PROCESSORS --config Debug
+
+    - name: Upload compiled binary debug
+      uses: actions/upload-artifact@v4
+      with:
+        name: Debug-build
+        path: |
+          build/Debug/
+
     - name: Upload compiled binary
       uses: actions/upload-artifact@v4
       with:
