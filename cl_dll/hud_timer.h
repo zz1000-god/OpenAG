@@ -1,7 +1,5 @@
 #pragma once
 
-#include "hud.h"
-
 class CHudTimer : public CHudBase
 {
 public:
