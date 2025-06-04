@@ -26,6 +26,7 @@ private:
 	float m_flEffectiveTime;
 	float m_flNextSyncTime;
 	bool m_flSynced;
+	bool m_bDelayTimeleftReading;
 	
 	// CVars
 	cvar_t* hud_timer;
