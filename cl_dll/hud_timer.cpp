@@ -2,6 +2,8 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "hud_timer.h"
+#include "net.h"
+#include "net_api.h"
 #include "discord_integration.h"
 #include <ctime>
 
