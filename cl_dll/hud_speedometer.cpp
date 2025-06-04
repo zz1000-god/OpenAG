@@ -39,7 +39,7 @@ int CHudSpeedometer::Draw(float time)
 	else
 	{
 		// Перевіряємо чи вимкнений hud_jumpspeed
-		cvar_t* hud_jumpspeed = CVAR_GET_POINTER("hud_jumpspeed");
+		cvar_t* hud_jumpspeed = gEngfuncs.pfnGetCvarPointer("hud_jumpspeed");
 		if (hud_jumpspeed && hud_jumpspeed->value == 0.0f)
 		{
 			// Якщо jumpspeed вимкнений, прижимаємо спідометр до самого низу
