@@ -137,8 +137,14 @@ int CHudTimer::Draw(float time)
 				seconds_to_draw = (int)(m_pCvarMpTimelimit->value * 60 - time);
 				if (seconds_to_draw < 0) seconds_to_draw = 0;
 			} else {
-				return 0; // No time limit set
+				strcpy(str, "No mp_timelimit");
+				int r, g, b;
+				UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
+				gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
+				return 1;
 			}
+
+		
 		} else {
 			// hud_timer = 2, show elapsed time
 			seconds_to_draw = (int)time;
