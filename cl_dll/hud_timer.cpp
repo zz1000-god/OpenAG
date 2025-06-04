@@ -51,8 +51,8 @@ int CHudTimer::Init()
 
 int CHudTimer::VidInit()
 {
-	// Don't disable HUD_ACTIVE here - let it stay active for local time display
-	// m_iFlags &= ~HUD_ACTIVE;
+	// Keep HUD active for timer display
+	m_iFlags |= HUD_ACTIVE;
 	
 	// Get pointers to server cvars
 	m_pCvarMpTimelimit = gEngfuncs.pfnGetCvarPointer("mp_timelimit");
@@ -122,8 +122,37 @@ int CHudTimer::Draw(float time)
 	}
 	
 	// Handle synced timer when no message timer is active
-	if (hud_timer->value == 0.0f || !m_flSynced)
+	if (hud_timer->value == 0.0f)
 		return 0;
+		
+	// For synced timer (values 1 and 2), we need sync data
+	if (hud_timer->value == 1.0f && m_flSynced) {
+        float timeleft = m_flEndTime - time;
+
+        // Якщо час не синхронізований або менший за 0, не малювати
+        if (timeleft <= 0)
+            return 0;
+
+        char str[64];
+        int seconds_to_draw = (int)(timeleft + 0.5f);
+        int days, hours, minutes, seconds;
+        unpack_seconds(seconds_to_draw, days, hours, minutes, seconds);
+
+        if (days > 0)
+            sprintf(str, "%d day%s %dh %dm %ds", days, (days > 1 ? "s" : ""), hours, minutes, seconds);
+        else if (hours > 0)
+            sprintf(str, "%dh %dm %ds", hours, minutes, seconds);
+        else if (minutes > 0)
+            sprintf(str, "%d:%02d", minutes, seconds);
+        else
+            sprintf(str, "%d", seconds_to_draw);
+
+        int r, g, b;
+        UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
+        gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
+
+        return 1;
+  	}		
 
 	float timeleft = m_flSynced ? (m_flEndTime - time) : (m_flEndTime - m_flEffectiveTime);
 	
