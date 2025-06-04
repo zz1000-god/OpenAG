@@ -1,6 +1,4 @@
-
 #include <time.h>
-
 
 #include "hud.h"
 #include "cl_util.h"
@@ -45,27 +43,27 @@ private:
 int CHudTimer::Init()
 {
 	HOOK_MESSAGE(Timer);
-	m_iFlags = 0;
 	hud_timer = CVAR_CREATE("hud_timer", "1", FCVAR_ARCHIVE);
+	m_iFlags |= HUD_ACTIVE;
 	gHUD.AddHudElem(this);
 	return 1;
 }
 
 int CHudTimer::VidInit()
 {
-	m_iFlags &= ~HUD_ACTIVE;
+	m_iFlags |= HUD_ACTIVE;
 	return 1;
 }
 
 int CHudTimer::Draw(float time)
 {
-	if (gHUD.m_flTime >= draw_until) {
+	if (hud_timer->value == 0.0f)
+		return 0;
+
+	if (time >= draw_until) {
 		m_iFlags &= ~HUD_ACTIVE;
 		return 0;
 	}
-
-	if (hud_timer->value == 0.0f)
-		return 0;
 
 	char str[64];
 	int seconds_to_draw = (hud_timer->value == 2.0f || seconds_total == 0)
@@ -81,25 +79,24 @@ int CHudTimer::Draw(float time)
 		struct tm* timeinfo;
 		time(&rawtime);
 		timeinfo = localtime(&rawtime);
-		sprintf(str, "Clock %02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		snprintf(str, sizeof(str), "Clock %02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	}
-
-	if (days > 0)
-		sprintf(str, "%d day%s %dh %dm %ds", days, (days > 1 ? "s" : ""), hours, minutes, seconds);
+	else if (days > 0)
+		snprintf(str, sizeof(str), "%d day%s %dh %dm %ds", days, (days > 1 ? "s" : ""), hours, minutes, seconds);
 	else if (hours > 0)
-		sprintf(str, "%dh %dm %ds", hours, minutes, seconds);
+		snprintf(str, sizeof(str), "%dh %dm %ds", hours, minutes, seconds);
 	else if (minutes > 0)
-		sprintf(str, "%d:%02d", minutes, seconds);
+		snprintf(str, sizeof(str), "%d:%02d", minutes, seconds);
 	else if (seconds_to_draw >= 0)
-		sprintf(str, "%d", seconds);
+		snprintf(str, sizeof(str), "%d", seconds);
 	else
-		sprintf(str, "%d", seconds_to_draw); // overtime
+		snprintf(str, sizeof(str), "%d", seconds_to_draw); // overtime
 
 	int r, g, b;
 	UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
 	gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
 
-	return 0;
+	return 1;
 }
 
 int CHudTimer::MsgFunc_Timer(const char* name, int size, void* buf)
@@ -107,7 +104,7 @@ int CHudTimer::MsgFunc_Timer(const char* name, int size, void* buf)
 	BEGIN_READ(buf, size);
 	seconds_total = READ_LONG();
 	seconds_passed = READ_LONG();
-	draw_until = gHUD.m_flTime + 5.0f;
+	draw_until = gHUD.m_flTime + seconds_total;
 	m_iFlags |= HUD_ACTIVE;
 	discord_integration::set_time_data(seconds_total, seconds_passed);
 	return 1;
