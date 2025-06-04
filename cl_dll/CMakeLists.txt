@@ -136,5 +136,8 @@ add_sources(
 	view.cpp
 	view.h
 	net.h
+ 	net_api.h
+  	demo.h
+   	demo_api.h
 	voice_status.cpp
 	wrect.h)
