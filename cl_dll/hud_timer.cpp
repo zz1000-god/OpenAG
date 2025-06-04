@@ -239,15 +239,17 @@ void CHudTimer::Think()
 		SyncTimer(flTime);
 }
 
-void CHudTimer::SyncTimerLocal(float fTime)
+void CHudTimer::SyncTimer(float fTime)
 {
+	// Note: Demo playback check removed due to API compatibility issues
+	
 	float prevEndtime = m_flEndTime;
-	int prevAgVersion = m_eAgVersion;
 
 	// Get timer settings directly from cvars
 	if (m_pCvarMpTimelimit && m_pCvarMpTimeleft)
 	{
 		m_flEndTime = m_pCvarMpTimelimit->value * 60;
+		
 		if (!m_bDelayTimeleftReading)
 		{
 			float timeleft = m_pCvarMpTimeleft->value;
@@ -260,11 +262,20 @@ void CHudTimer::SyncTimerLocal(float fTime)
 				m_flSynced = true;
 			}
 		}
-		if (m_flEndTime != prevEndtime)
-			m_bNeedWriteTimer = true;
+	}
+
+	if (m_bDelayTimeleftReading)
+	{
+		m_bDelayTimeleftReading = false;
+		// Update soon after initial delay
+		m_flNextSyncTime = fTime + 1.5;
+	}
+	else
+	{
+		// Regular sync interval
+		m_flNextSyncTime = fTime + 2.0;
 	}
 }
-
 
 void CHudTimer::DoResync()
 {
