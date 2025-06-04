@@ -11,7 +11,7 @@
 
 #include <time.h>
 
-#include "timer.h"
+#include "hud_timer.h"
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
