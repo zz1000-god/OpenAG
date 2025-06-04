@@ -37,7 +37,20 @@ int CHudSpeedometer::Draw(float time)
 	else if (hud_speedometer_height->value != 0.0f)
 		y = hud_speedometer_height->value;
 	else
-		y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 - gHUD.m_iFontHeight;
+	{
+		// Перевіряємо чи вимкнений hud_jumpspeed
+		cvar_t* hud_jumpspeed = CVAR_GET_POINTER("hud_jumpspeed");
+		if (hud_jumpspeed && hud_jumpspeed->value == 0.0f)
+		{
+			// Якщо jumpspeed вимкнений, прижимаємо спідометр до самого низу
+			y = ScreenHeight - gHUD.m_iFontHeight / 2;
+		}
+		else
+		{
+			// Якщо jumpspeed увімкнений, залишаємо місце для нього
+			y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 - gHUD.m_iFontHeight;
+		}
+	}
 
 	gHUD.DrawHudNumberCentered(ScreenWidth / 2, y, speed, r, g, b);
 
