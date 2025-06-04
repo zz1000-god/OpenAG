@@ -136,7 +136,6 @@ add_sources(
 	view.cpp
 	view.h
 	net.h
- 	net_stub.cpp
    	net_windows.cpp
  	net_api.h
   	demo.h
