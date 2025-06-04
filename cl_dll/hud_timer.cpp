@@ -51,8 +51,8 @@ int CHudTimer::Init()
 
 int CHudTimer::VidInit()
 {
-	// Keep HUD active for timer display
-	m_iFlags |= HUD_ACTIVE;
+	// Don't disable HUD_ACTIVE here - let it stay active for local time display
+	// m_iFlags &= ~HUD_ACTIVE;
 	
 	// Get pointers to server cvars
 	m_pCvarMpTimelimit = gEngfuncs.pfnGetCvarPointer("mp_timelimit");
@@ -122,43 +122,8 @@ int CHudTimer::Draw(float time)
 	}
 	
 	// Handle synced timer when no message timer is active
-	if (hud_timer->value == 0.0f)
+	if (hud_timer->value == 0.0f || !m_flSynced)
 		return 0;
-		
-	// For synced timer (values 1 and 2), we need sync data
-	if ((hud_timer->value == 1.0f || hud_timer->value == 2.0f) && !m_flSynced) {
-		// If no sync data available, try to use basic time display
-		char str[64];
-		int seconds_to_draw = (int)time;
-		
-		if (hud_timer->value == 1.0f) {
-			// Show remaining time based on mp_timelimit if available
-			if (m_pCvarMpTimelimit && m_pCvarMpTimelimit->value > 0) {
-				seconds_to_draw = (int)(m_pCvarMpTimelimit->value * 60 - time);
-				if (seconds_to_draw < 0) seconds_to_draw = 0;
-			} else {
-				return 0; // No time limit set
-			}
-		} else {
-			// hud_timer = 2, show elapsed time
-			seconds_to_draw = (int)time;
-		}
-		
-		int days, hours, minutes, seconds;
-		unpack_seconds(seconds_to_draw, days, hours, minutes, seconds);
-
-		if (hours > 0)
-			sprintf(str, "%dh %dm %ds", hours, minutes, seconds);
-		else if (minutes > 0)
-			sprintf(str, "%d:%02d", minutes, seconds);
-		else
-			sprintf(str, "%d", seconds_to_draw);
-
-		int r, g, b;
-		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-		gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-		return 1;
-	}
 
 	float timeleft = m_flSynced ? (m_flEndTime - time) : (m_flEndTime - m_flEffectiveTime);
 	
