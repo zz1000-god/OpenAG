@@ -5,9 +5,10 @@
 class CHudTimer : public CHudBase
 {
 public:
-	int Init();
-	int VidInit();
-	int Draw(float flTime);
+	virtual int Init();
+	virtual int VidInit();
+	virtual int Draw(float time);
+
 	int MsgFunc_Timer(const char* name, int size, void* buf);
 	void Think();
 
