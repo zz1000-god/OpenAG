@@ -68,133 +68,89 @@ int CHudTimer::VidInit()
 	return 1;
 }
 
-int CHudTimer::Draw(float time)
+void CHudTimer::Draw(float fTime)
 {
-	if (gHUD.m_iHideHUDDisplay & HIDEHUD_ALL)
-		return 0;
+    if (gHUD.m_iHideHUDDisplay & HIDEHUD_ALL)
+        return;
 
-	// Handle local time display (hud_timer = 3)
-	if (hud_timer->value == 3.0f) {
-		time_t rawtime;
-		struct tm* timeinfo;
-		char str[64];
-		
-		::time(&rawtime);
-		timeinfo = ::localtime(&rawtime);
-		
-		// Format: HH:MM:SS
-		sprintf(str, "%02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-		
-		int r, g, b;
-		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-		gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-		return 1;
-	}
+    float currentTime = fTime;
+    float timeleft = m_flSynced ? (m_flEndTime - currentTime) : (m_flEndTime - m_flEffectiveTime);
+    int ypos = ScreenHeight * TIMER_Y;
+    int hud_timer = (int)m_pCvarHudTimer->value;
 
-	// Handle message-based timer
-	if (gHUD.m_flTime < draw_until) {
-		if (hud_timer->value == 0.0f)
-			return 0;
+    int r, g, b;
+    float a = 255 * gHUD.GetHudTransparency();
+    gHUD.GetHudColor(HudPart::Common, 0, r, g, b);
+    ScaleColors(r, g, b, a);
 
-		char str[64];
-		int seconds_to_draw = (hud_timer->value == 2.0f || seconds_total == 0)
-			? seconds_passed
-			: seconds_total - seconds_passed;
+    Con_Printf("HUD Timer Debug: Mode %d, Synced %d, EndTime %.2f, TimeLeft %.2f\n", hud_timer, (int)m_flSynced, m_flEndTime, timeleft);
 
-		int days, hours, minutes, seconds;
-		unpack_seconds(seconds_to_draw, days, hours, minutes, seconds);
+    switch (hud_timer)
+    {
+    case 1: // Відображає залишковий час до кінця раунду
+        if (currentTime > 0 && timeleft > 0)
+        {
+            div_t q;
+            char text[64];
 
-		if (days > 0)
-			sprintf(str, "%d day%s %dh %dm %ds", days, (days > 1 ? "s" : ""), hours, minutes, seconds);
-		else if (hours > 0)
-			sprintf(str, "%dh %dm %ds", hours, minutes, seconds);
-		else if (minutes > 0)
-			sprintf(str, "%d:%02d", minutes, seconds);
-		else if (seconds_to_draw >= 0)
-			sprintf(str, "%d", seconds);
-		else
-			sprintf(str, "%d", seconds_to_draw); // overtime
+            if (timeleft >= 86400) // Дні
+            {
+                q = div((int)timeleft, 86400);
+                int d = q.quot;
+                q = div(q.rem, 3600);
+                int h = q.quot;
+                q = div(q.rem, 60);
+                int m = q.quot;
+                int s = q.rem;
+                sprintf(text, "%dd %dh %02dm %02ds", d, h, m, s);
+            }
+            else if (timeleft >= 3600) // Години
+            {
+                q = div((int)timeleft, 3600);
+                int h = q.quot;
+                q = div(q.rem, 60);
+                int m = q.quot;
+                int s = q.rem;
+                sprintf(text, "%dh %02dm %02ds", h, m, s);
+            }
+            else if (timeleft >= 60) // Хвилини
+            {
+                q = div((int)timeleft, 60);
+                int m = q.quot;
+                int s = q.rem;
+                sprintf(text, "%d:%02d", m, s);
+            }
+            else // Секунди
+            {
+                sprintf(text, "%d", (int)timeleft);
+            }
 
-		int r, g, b;
-		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-		gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-		return 1;
-	}
-	
-	// Handle synced timer when no message timer is active
-	if (hud_timer->value == 0.0f)
-		return 0;
-		
-	// For synced timer (values 1 and 2), we need sync data
-	if (hud_timer->value == 1.0f && m_flSynced) {
-        float timeleft = m_flEndTime - time;
+            int width = TextMessageDrawString(ScreenWidth + 1, ypos, text, 0, 0, 0);
+            TextMessageDrawString((ScreenWidth - width) / 2, ypos, text, r, g, b);
+        }
+        break;
 
-        // Якщо час не синхронізований або менший за 0, не малювати
-        if (timeleft <= 0)
-            return 0;
+    case 2: // Відображає пройдений час
+        if (currentTime > 0)
+        {
+            char text[64];
+            sprintf(text, "%d", (int)currentTime);
+            int width = TextMessageDrawString(ScreenWidth + 1, ypos, text, 0, 0, 0);
+            TextMessageDrawString((ScreenWidth - width) / 2, ypos, text, r, g, b);
+        }
+        break;
 
+    case 3: // Локальний комп’ютерний час
+        time_t rawtime;
+        struct tm *timeinfo;
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
         char str[64];
-        int seconds_to_draw = (int)(timeleft + 0.5f);
-        int days, hours, minutes, seconds;
-        unpack_seconds(seconds_to_draw, days, hours, minutes, seconds);
-
-        if (days > 0)
-            sprintf(str, "%d day%s %dh %dm %ds", days, (days > 1 ? "s" : ""), hours, minutes, seconds);
-        else if (hours > 0)
-            sprintf(str, "%dh %dm %ds", hours, minutes, seconds);
-        else if (minutes > 0)
-            sprintf(str, "%d:%02d", minutes, seconds);
-        else
-            sprintf(str, "%d", seconds_to_draw);
-
-        int r, g, b;
-        UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-        gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-
-        return 1;
-  	}		
-
-	float timeleft = m_flSynced ? (m_flEndTime - time) : (m_flEndTime - m_flEffectiveTime);
-	
-	if (timeleft <= 0 && hud_timer->value == 1.0f) // Don't show negative time left
-		return 0;
-		
-	char str[64];
-	int seconds_to_draw;
-	
-	if (hud_timer->value == 1.0f) // time left
-		seconds_to_draw = (int)(timeleft + 0.5f);
-	else if (hud_timer->value == 2.0f) // time passed
-		seconds_to_draw = (int)(time + 0.5f);
-	else
-		return 0;
-
-	int days, hours, minutes, seconds;
-	unpack_seconds(abs(seconds_to_draw), days, hours, minutes, seconds);
-
-	if (days > 0)
-		sprintf(str, "%s%d day%s %dh %dm %ds", (seconds_to_draw < 0 ? "-" : ""), days, (days > 1 ? "s" : ""), hours, minutes, seconds);
-	else if (hours > 0)
-		sprintf(str, "%s%dh %dm %ds", (seconds_to_draw < 0 ? "-" : ""), hours, minutes, seconds);
-	else if (minutes > 0)
-		sprintf(str, "%s%d:%02d", (seconds_to_draw < 0 ? "-" : ""), minutes, seconds);
-	else
-		sprintf(str, "%d", seconds_to_draw);
-
-	int r, g, b;
-	// Red color for low time (less than 60 seconds)
-	if (hud_timer->value == 1.0f && seconds_to_draw <= 60 && seconds_to_draw > 0)
-	{
-		r = 255; g = 16; b = 16;
-	}
-	else
-	{
-		UnpackRGB(r, g, b, gHUD.m_iDefaultHUDColor);
-	}
-	
-	gHUD.DrawHudStringCentered(ScreenWidth / 2, gHUD.m_scrinfo.iCharHeight, str, r, g, b);
-
-	return 1;
+        sprintf(str, "Clock %d:%02d:%02d", (int)timeinfo->tm_hour, (int)timeinfo->tm_min, (int)timeinfo->tm_sec);
+        int width = TextMessageDrawString(ScreenWidth + 1, ypos, str, 0, 0, 0);
+        TextMessageDrawString((ScreenWidth - width) / 2, ypos, str, r, g, b);
+        break;
+    }
 }
 
 int CHudTimer::MsgFunc_Timer(const char* name, int size, void* buf)
