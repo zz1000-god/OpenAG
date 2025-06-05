@@ -437,13 +437,12 @@ void V_DriftPitch ( struct ref_params_s *pparams )
 {
 	float		delta, move;
 
-	if ( gEngfuncs.IsNoClipping() || !pparams->onground || pparams->demoplayback || pparams->spectator )
+	if (gEngfuncs.IsNoClipping() || !pparams->onground || pparams->demoplayback || pparams->spectator || g_iUser1 == OBS_IN_EYE)
 	{
 		pd.driftmove = 0;
 		pd.pitchvel = 0;
 		return;
 	}
-
 	// don't count small mouse motion
 	if ( pd.nodrift)
 	{
@@ -666,9 +665,9 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 	V_DriftPitch ( pparams );
 
-	if ( gEngfuncs.IsSpectateOnly() )
+	if (gEngfuncs.IsSpectateOnly() || g_iUser1 == OBS_IN_EYE)
 	{
-		ent = gEngfuncs.GetEntityByIndex( g_iUser2 );
+		ent = gEngfuncs.GetEntityByIndex(g_iUser2);
 	}
 	else
 	{
@@ -1745,24 +1744,42 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 				}
 			}
 
-			if (lastViewModelIndex)
+			if ( lastWeaponModelIndex != ent->curstate.weaponmodel )
 			{
-				gunModel->model = IEngineStudio.GetModelByIndex(lastViewModelIndex);
+				// weapon model changed
+
+				lastWeaponModelIndex = ent->curstate.weaponmodel;
+				lastViewModelIndex = V_FindViewModelByWeaponModel( lastWeaponModelIndex );
+				if ( lastViewModelIndex )
+				{
+					gEngfuncs.pfnWeaponAnim(0,0);	// reset weapon animation
+				}
+				else
+				{
+					// model not found
+					gunModel->model = NULL;	// disable weapon model
+					lastWeaponModelIndex = lastViewModelIndex = 0;
+				}
+			}
+
+			if ( lastViewModelIndex )
+			{
+				gunModel->model = IEngineStudio.GetModelByIndex( lastViewModelIndex );
 				gunModel->curstate.modelindex = lastViewModelIndex;
 				gunModel->curstate.frame = 0;
-				gunModel->curstate.colormap = 0;
+				gunModel->curstate.colormap = 0; 
 				gunModel->index = g_iUser2;
 			}
 			else
 			{
-				gunModel->model = NULL; // disable weaopn model
+				gunModel->model = NULL;	// disable weaopn model
 			}
 		}
 		else
 		{
 			// only get viewangles from entity
-			VectorCopy(ent->angles, pparams->cl_viewangles);
-			pparams->cl_viewangles[PITCH] *= -3.0f; // see CL_ProcessEntityUpdate()
+			VectorCopy ( ent->angles, pparams->cl_viewangles );
+			pparams->cl_viewangles[PITCH]*=-3.0f;	// see CL_ProcessEntityUpdate()
 		}
 	}
 
