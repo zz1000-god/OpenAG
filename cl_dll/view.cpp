@@ -1721,50 +1721,48 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 //		if ( gEngfuncs.IsSpectateOnly() )
 //#endif
 		{
-			
-			V_GetInEyePos( g_iUser2, pparams->simorg, pparams->cl_viewangles );
-			
+			V_GetInEyePos(g_iUser2, pparams->simorg, pparams->cl_viewangles);
 
 			pparams->health = 1;
 
-			cl_entity_t	 * gunModel = gEngfuncs.GetViewModel();
+			cl_entity_t *gunModel = gEngfuncs.GetViewModel();
 
-			if ( lastWeaponModelIndex != ent->curstate.weaponmodel )
+			if (lastWeaponModelIndex != ent->curstate.weaponmodel)
 			{
 				// weapon model changed
 
 				lastWeaponModelIndex = ent->curstate.weaponmodel;
-				lastViewModelIndex = V_FindViewModelByWeaponModel( lastWeaponModelIndex );
-				if ( lastViewModelIndex )
+				lastViewModelIndex = V_FindViewModelByWeaponModel(lastWeaponModelIndex);
+				if (lastViewModelIndex)
 				{
-					gEngfuncs.pfnWeaponAnim(0,0);	// reset weapon animation
+					gEngfuncs.pfnWeaponAnim(0, 0); // reset weapon animation
 				}
 				else
 				{
 					// model not found
-					gunModel->model = NULL;	// disable weapon model
+					gunModel->model = NULL; // disable weapon model
 					lastWeaponModelIndex = lastViewModelIndex = 0;
 				}
 			}
 
-			if ( lastViewModelIndex )
+			if (lastViewModelIndex)
 			{
-				gunModel->model = IEngineStudio.GetModelByIndex( lastViewModelIndex );
+				gunModel->model = IEngineStudio.GetModelByIndex(lastViewModelIndex);
 				gunModel->curstate.modelindex = lastViewModelIndex;
 				gunModel->curstate.frame = 0;
-				gunModel->curstate.colormap = 0; 
+				gunModel->curstate.colormap = 0;
 				gunModel->index = g_iUser2;
 			}
 			else
 			{
-				gunModel->model = NULL;	// disable weaopn model
+				gunModel->model = NULL; // disable weaopn model
 			}
 		}
 		else
 		{
 			// only get viewangles from entity
-			VectorCopy ( ent->angles, pparams->cl_viewangles );
-			pparams->cl_viewangles[PITCH]*=-3.0f;	// see CL_ProcessEntityUpdate()
+			VectorCopy(ent->angles, pparams->cl_viewangles);
+			pparams->cl_viewangles[PITCH] *= -3.0f; // see CL_ProcessEntityUpdate()
 		}
 	}
 
