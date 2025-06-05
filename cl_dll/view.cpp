@@ -1677,180 +1677,178 @@ V_CalcSpectatorRefdef
 
 ==================
 */
-void V_CalcSpectatorRefdef(struct ref_params_s *pparams)
+void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 {
-	static Vector velocity(0.0f, 0.0f, 0.0f);
+	static vec3_t			velocity ( 0.0f, 0.0f, 0.0f);
 
 	static int lastWeaponModelIndex = 0;
 	static int lastViewModelIndex = 0;
-
-	cl_entity_t *ent = gEngfuncs.GetEntityByIndex(g_iUser2);
-
+		
+	cl_entity_t	 * ent = gEngfuncs.GetEntityByIndex( g_iUser2 );
+	
 	pparams->onlyClientDraw = false;
 
 	// refresh position
-	VectorCopy(pparams->simorg, v_sim_org);
+	VectorCopy ( pparams->simorg, v_sim_org );
 
 	// get old values
-	VectorCopy(pparams->cl_viewangles, v_cl_angles);
-	VectorCopy(pparams->viewangles, v_angles);
-	VectorCopy(pparams->vieworg, v_origin);
+	VectorCopy ( pparams->cl_viewangles, v_cl_angles );
+	VectorCopy ( pparams->viewangles, v_angles );
+	VectorCopy ( pparams->vieworg, v_origin );
 
-	if ((g_iUser1 == OBS_IN_EYE || CHudSpectator::Get()->m_pip->value == INSET_IN_EYE) && ent)
+	if (  ( g_iUser1 == OBS_IN_EYE || gHUD.m_Spectator.m_pip->value == INSET_IN_EYE ) && ent )
 	{
 		// calculate player velocity
 		float timeDiff = ent->curstate.msg_time - ent->prevstate.msg_time;
 
-		if (timeDiff > 0)
+		if ( timeDiff > 0 )
 		{
-			Vector distance;
+			vec3_t distance;
 			VectorSubtract(ent->prevstate.origin, ent->curstate.origin, distance);
-			VectorScale(distance, 1 / timeDiff, distance);
+			VectorScale(distance, 1/timeDiff, distance );
 
-			velocity[0] = velocity[0] * 0.9f + distance[0] * 0.1f;
-			velocity[1] = velocity[1] * 0.9f + distance[1] * 0.1f;
-			velocity[2] = velocity[2] * 0.9f + distance[2] * 0.1f;
-
+			velocity[0] = velocity[0]*0.9f + distance[0]*0.1f;
+			velocity[1] = velocity[1]*0.9f + distance[1]*0.1f;
+			velocity[2] = velocity[2]*0.9f + distance[2]*0.1f;
+			
 			VectorCopy(velocity, pparams->simvel);
 		}
 
-		// predict missing client data and set weapon model ( in HLTV mode or inset in eye mode or in AG )
-		if (gEngfuncs.IsSpectateOnly() || gHUD.IsAG())
+		// predict missing client data and set weapon model ( in HLTV mode or inset in eye mode )
+//#ifdef _TFC
+		if ( gEngfuncs.IsSpectateOnly() || gHUD.m_Spectator.m_pip->value == INSET_IN_EYE || g_iUser1 == OBS_IN_EYE )
+//#else
+//		if ( gEngfuncs.IsSpectateOnly() )
+//#endif
 		{
-			V_GetInEyePos(g_iUser2, pparams->simorg, pparams->cl_viewangles);
+			
+			V_GetInEyePos( g_iUser2, pparams->simorg, pparams->cl_viewangles );
+			
 
 			pparams->health = 1;
 
-			cl_entity_t *gunModel = gEngfuncs.GetViewModel();
+			cl_entity_t	 * gunModel = gEngfuncs.GetViewModel();
 
-			if (lastWeaponModelIndex != ent->curstate.weaponmodel)
+			if ( lastWeaponModelIndex != ent->curstate.weaponmodel )
 			{
 				// weapon model changed
 
 				lastWeaponModelIndex = ent->curstate.weaponmodel;
-				lastViewModelIndex = V_FindViewModelByWeaponModel(lastWeaponModelIndex);
-				if (lastViewModelIndex)
+				lastViewModelIndex = V_FindViewModelByWeaponModel( lastWeaponModelIndex );
+				if ( lastViewModelIndex )
 				{
-					gEngfuncs.pfnWeaponAnim(0, 0); // reset weapon animation
+					gEngfuncs.pfnWeaponAnim(0,0);	// reset weapon animation
 				}
 				else
 				{
 					// model not found
-					gunModel->model = NULL; // disable weapon model
+					gunModel->model = NULL;	// disable weapon model
 					lastWeaponModelIndex = lastViewModelIndex = 0;
 				}
 			}
 
-			if (lastViewModelIndex)
+			if ( lastViewModelIndex )
 			{
-				gunModel->model = IEngineStudio.GetModelByIndex(lastViewModelIndex);
+				gunModel->model = IEngineStudio.GetModelByIndex( lastViewModelIndex );
 				gunModel->curstate.modelindex = lastViewModelIndex;
 				gunModel->curstate.frame = 0;
-				gunModel->curstate.colormap = 0;
+				gunModel->curstate.colormap = 0; 
 				gunModel->index = g_iUser2;
 			}
 			else
 			{
-				gunModel->model = NULL; // disable weaopn model
+				gunModel->model = NULL;	// disable weaopn model
 			}
 		}
 		else
 		{
 			// only get viewangles from entity
-			VectorCopy(ent->angles, pparams->cl_viewangles);
-			pparams->cl_viewangles[PITCH] *= -3.0f; // see CL_ProcessEntityUpdate()
+			VectorCopy ( ent->angles, pparams->cl_viewangles );
+			pparams->cl_viewangles[PITCH]*=-3.0f;	// see CL_ProcessEntityUpdate()
 		}
 	}
 
 	v_frametime = pparams->frametime;
 
-	if (pparams->nextView == 0)
+	if ( pparams->nextView == 0 )
 	{
 		// first renderer cycle, full screen
 
-		switch (g_iUser1)
+		switch ( g_iUser1 )
 		{
-		case OBS_CHASE_LOCKED:
-			V_GetChasePos(g_iUser2, NULL, v_origin, v_angles);
-			break;
+			case OBS_CHASE_LOCKED:	V_GetChasePos( g_iUser2, NULL, v_origin, v_angles );
+									break;
 
-		case OBS_CHASE_FREE:
-			V_GetChasePos(g_iUser2, v_cl_angles, v_origin, v_angles);
-			break;
+			case OBS_CHASE_FREE:	V_GetChasePos( g_iUser2, v_cl_angles, v_origin, v_angles );
+									break;
 
-		case OBS_ROAMING:
-			VectorCopy(v_cl_angles, v_angles);
-			VectorCopy(v_sim_org, v_origin);
+			case OBS_ROAMING	:	VectorCopy (v_cl_angles, v_angles);
+									VectorCopy (v_sim_org, v_origin);
+									
+									// override values if director is active
+									gHUD.m_Spectator.GetDirectorCamera(v_origin, v_angles);
+									break;
 
-			// override values if director is active
-			CHudSpectator::Get()->GetDirectorCamera(v_origin, v_angles);
-			break;
+			case OBS_IN_EYE		:   V_CalcNormalRefdef ( pparams );
+									break;
+				
+			case OBS_MAP_FREE  :	pparams->onlyClientDraw = true;
+									V_GetMapFreePosition( v_cl_angles, v_origin, v_angles );
+									break;
 
-		case OBS_IN_EYE:
-			V_CalcNormalRefdef(pparams);
-			break;
-
-		case OBS_MAP_FREE:
-			pparams->onlyClientDraw = true;
-			V_GetMapFreePosition(v_cl_angles, v_origin, v_angles);
-			break;
-
-		case OBS_MAP_CHASE:
-			pparams->onlyClientDraw = true;
-			V_GetMapChasePosition(g_iUser2, v_cl_angles, v_origin, v_angles);
-			break;
+			case OBS_MAP_CHASE  :	pparams->onlyClientDraw = true;
+									V_GetMapChasePosition( g_iUser2, v_cl_angles, v_origin, v_angles );
+									break;
 		}
 
-		if (CHudSpectator::Get()->m_pip->value)
-			pparams->nextView = 1; // force a second renderer view
+		if ( gHUD.m_Spectator.m_pip->value )
+			pparams->nextView = 1;	// force a second renderer view
 
-		CHudSpectator::Get()->m_iDrawCycle = 0;
+		gHUD.m_Spectator.m_iDrawCycle = 0;
+
 	}
 	else
 	{
 		// second renderer cycle, inset window
 
 		// set inset parameters
-		pparams->viewport[0] = XRES(CHudSpectator::Get()->m_OverviewData.insetWindowX); // change viewport to inset window
-		pparams->viewport[1] = YRES(CHudSpectator::Get()->m_OverviewData.insetWindowY);
-		pparams->viewport[2] = XRES(CHudSpectator::Get()->m_OverviewData.insetWindowWidth);
-		pparams->viewport[3] = YRES(CHudSpectator::Get()->m_OverviewData.insetWindowHeight);
-		pparams->nextView = 0; // on further view
+		pparams->viewport[0] = XRES(gHUD.m_Spectator.m_OverviewData.insetWindowX);	// change viewport to inset window
+		pparams->viewport[1] = YRES(gHUD.m_Spectator.m_OverviewData.insetWindowY);
+		pparams->viewport[2] = XRES(gHUD.m_Spectator.m_OverviewData.insetWindowWidth);
+		pparams->viewport[3] = YRES(gHUD.m_Spectator.m_OverviewData.insetWindowHeight);
+		pparams->nextView	 = 0;	// on further view
 
 		// override some settings in certain modes
-		switch ((int)CHudSpectator::Get()->m_pip->value)
+		switch ( (int)gHUD.m_Spectator.m_pip->value )
 		{
-		case INSET_CHASE_FREE:
-			V_GetChasePos(g_iUser2, v_cl_angles, v_origin, v_angles);
-			break;
+			case INSET_CHASE_FREE : V_GetChasePos( g_iUser2, v_cl_angles, v_origin, v_angles );
+									break;	
 
-		case INSET_IN_EYE:
-			V_CalcNormalRefdef(pparams);
-			break;
+			case INSET_IN_EYE	 :	V_CalcNormalRefdef ( pparams );
+									break;
 
-		case INSET_MAP_FREE:
-			pparams->onlyClientDraw = true;
-			V_GetMapFreePosition(v_cl_angles, v_origin, v_angles);
-			break;
+			case INSET_MAP_FREE  :	pparams->onlyClientDraw = true;
+									V_GetMapFreePosition( v_cl_angles, v_origin, v_angles );
+									break;
 
-		case INSET_MAP_CHASE:
-			pparams->onlyClientDraw = true;
+			case INSET_MAP_CHASE  :	pparams->onlyClientDraw = true;
 
-			if (g_iUser1 == OBS_ROAMING)
-				V_GetMapChasePosition(0, v_cl_angles, v_origin, v_angles);
-			else
-				V_GetMapChasePosition(g_iUser2, v_cl_angles, v_origin, v_angles);
+									if ( g_iUser1 == OBS_ROAMING )
+										V_GetMapChasePosition( 0, v_cl_angles, v_origin, v_angles );
+									else
+										V_GetMapChasePosition( g_iUser2, v_cl_angles, v_origin, v_angles );
 
-			break;
+									break;
 		}
 
-		CHudSpectator::Get()->m_iDrawCycle = 1;
+		gHUD.m_Spectator.m_iDrawCycle = 1;
 	}
 
 	// write back new values into pparams
-	VectorCopy(v_cl_angles, pparams->cl_viewangles);
-	VectorCopy(v_angles, pparams->viewangles);
-	VectorCopy(v_origin, pparams->vieworg);
+	VectorCopy ( v_cl_angles, pparams->cl_viewangles );
+	VectorCopy ( v_angles, pparams->viewangles )
+	VectorCopy ( v_origin, pparams->vieworg );
+
 }
 
 
