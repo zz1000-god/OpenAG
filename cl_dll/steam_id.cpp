@@ -1,14 +1,15 @@
-#include <algorithm>
-#include <array>
-#include <unordered_map>
-#include <string>
-#include <fstream>
+#include <algorithm> 
 #include <cctype>
-#include <cstring>
-#include "steam_id.h"
+#include <chrono>
+#include <functional> 
+#include <fstream>
+#include <locale>
+#include <unordered_map>
+
+#include "hud.h"
+#include "cl_util.h"
 #include "parsemsg.h"
 #include "forcemodel.h"
-#include "hud.h"
 
 namespace steam_id
 {
@@ -20,12 +21,13 @@ namespace steam_id
 		std::string real_names[MAX_PLAYERS];
 		std::unordered_map<std::string, std::string> steam_id_to_real_name;
 
-		// String trimming functions
+		// String trimming functions from http://stackoverflow.com/a/217605
 		inline std::string& ltrim(std::string& s) {
 			s.erase(
 				s.begin(),
 				std::find_if(s.begin(), s.end(), [](auto c) { return !std::isspace(c); })
 			);
+
 			return s;
 		}
 
@@ -34,6 +36,7 @@ namespace steam_id
 				std::find_if(s.rbegin(), s.rend(), [](auto c) { return !std::isspace(c); }).base(),
 				s.end()
 			);
+
 			return s;
 		}
 
@@ -75,6 +78,7 @@ namespace steam_id
 
 				/*
 				 * Find the beginning of the name.
+				 * This should always find something because otherwise trim would remove the space.
 				 */
 				auto real_name_start = std::find_if(
 					first_space,
@@ -94,11 +98,12 @@ namespace steam_id
 					real_names[i].clear();
 				} else {
 					auto entry = steam_id_to_real_name.find(steam_ids[i]);
+
 					if (entry == steam_id_to_real_name.cend())
 						real_names[i].clear();
 					else
 						real_names[i] = entry->second;
-				}
+				} 
 			}
 		}
 
@@ -110,30 +115,68 @@ namespace steam_id
 			auto id = READ_STRING();
 
 			if (slot >= 1 && slot <= MAX_PLAYERS) {
-				if (id && id[0]) {
-					steam_ids[slot - 1].assign(id); // Зберігаємо повний STEAM_0:1:XXXXXX
+				auto underscore = strchr(id, '_');
+
+				if (underscore) {
+					steam_ids[slot - 1].assign(id);
+
 					if (showing_real_names)
 						update_real_names();
 
 					force_model::update_player_steam_id(slot - 1);
 				}
 			}
+
 			return 1;
+		}
+
+		void callback_loadauthid()
+		{
+			auto start = std::chrono::steady_clock::now();
+			parse_realnames();
+			auto end = std::chrono::steady_clock::now();
+
+			update_real_names();
+
+			showing_real_names = true;
+
+			gEngfuncs.Con_Printf(
+				"Loaded %llu real names.\n",
+				static_cast<unsigned long long>(steam_id_to_real_name.size())
+			);
+
+			auto parsing_took = std::chrono::duration<double, std::milli>(end - start);
+			gEngfuncs.Con_DPrintf("Parsing took %.2f ms.\n", parsing_took.count());
+		}
+
+		void callback_unloadauthid()
+		{
+			auto print_message = (steam_id_to_real_name.size() > 0);
+			steam_id_to_real_name.clear();
+
+			showing_real_names = false;
+
+			if (print_message)
+				gEngfuncs.Con_Printf("Unloaded all real names.\n");
 		}
 	}
 
 	void hook_messages()
 	{
-		HOOK_MESSAGE(AuthID);
+		gEngfuncs.pfnHookUserMsg("AuthID", msgfunc_AuthID);
+
+		gEngfuncs.pfnAddCommand("loadauthid", callback_loadauthid);
+		gEngfuncs.pfnAddCommand("unloadauthid", callback_unloadauthid);
 	}
 
-	const std::string& get_steam_id(size_t player_index)
+
+  	const std::string& get_steam_id(size_t player_index)
 	{
-		static std::string empty;
-		if (player_index < MAX_PLAYERS)
-			return steam_ids[player_index];
-		return empty;
-	}
+   	    static std::string empty;
+    	    if (player_index < MAX_PLAYERS)
+    	    return steam_ids[player_index];
+    	    return empty;
+  	}
 
 	bool is_showing_real_names()
 	{
@@ -142,44 +185,6 @@ namespace steam_id
 
 	const std::string& get_real_name(size_t player_index)
 	{
-		static std::string empty;
-		if (player_index < MAX_PLAYERS)
-			return real_names[player_index];
-		return empty;
-	}
-
-	void set_showing_real_names(bool show)
-	{
-		showing_real_names = show;
-		if (show)
-			parse_realnames();
-		update_real_names();
-	}
-
-	uint64_t get_steam_id64(size_t player_index)
-	{
-		const std::string& id = get_steam_id(player_index);
-
-		if (id.empty())
-			return 0;
-
-		// Очікується формат STEAM_X:Y:ZZZZZZZ
-		int iServer = 0, iAuthID = 0;
-		char szAuthID[64];
-		strncpy(szAuthID, id.c_str(), sizeof(szAuthID) - 1);
-		szAuthID[sizeof(szAuthID) - 1] = '\0';
-		// Знаходимо перше двокрапка
-		char* szTmp = strtok(szAuthID, ":");
-		while (szTmp = strtok(NULL, ":")) {
-			char* szTmp2 = strtok(NULL, ":");
-			if (szTmp2) {
-				iServer = atoi(szTmp);
-				iAuthID = atoi(szTmp2);
-			}
-		}
-		if (iAuthID == 0) return 0;
-		uint64_t i64friendID = (long long)iAuthID * 2;
-		i64friendID += 76561197960265728 + iServer;
-		return i64friendID;
+		return real_names[player_index];
 	}
 }
