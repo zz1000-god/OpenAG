@@ -10,3 +10,5 @@ namespace steam_id
 	bool is_showing_real_names();
 	const std::string& get_real_name(size_t player_index);
 }
+
+uint64_t parse_steam_id_64(const std::string& id);
