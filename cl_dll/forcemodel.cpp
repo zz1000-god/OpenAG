@@ -437,6 +437,22 @@ namespace force_model
 
 			update_player_teams();
 		}
+
+		void callback_cl_playerlist()
+		{
+			gEngfuncs.Con_Printf("Player list:\n");
+			for (int i = 0; i < MAX_PLAYERS; ++i) {
+				gEngfuncs.pfnGetPlayerInfo(i + 1, &g_PlayerInfoList[i + 1]);
+				if (g_PlayerInfoList[i + 1].name && g_PlayerInfoList[i + 1].name[0]) {
+					gEngfuncs.Con_Printf(
+						"#%d: %s (SteamID: %s)\n",
+						IEngineStudio.PlayerInfo(i)->userid,
+						g_PlayerInfoList[i + 1].name,
+						steam_id::get_steam_id(i).c_str()
+					);
+				}
+			}
+		}
 	}
 
 	void hook_commands()
@@ -451,6 +467,7 @@ namespace force_model
 
 		gEngfuncs.pfnAddCommand("cl_forceteammatemodel", callback_cl_forceteammatemodel);
 		gEngfuncs.pfnAddCommand("cl_forceenemymodel", callback_cl_forceenemymodel);
+		gEngfuncs.pfnAddCommand("cl_playerlist", callback_cl_playerlist);
 	}
 
 	void update_player_team(int player_index)
