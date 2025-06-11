@@ -5,6 +5,7 @@
 #include <fstream>
 #include <locale>
 #include <unordered_map>
+#include <cstring>
 
 #include "hud.h"
 #include "cl_util.h"
@@ -183,4 +184,26 @@ namespace steam_id
 	{
 		return real_names[player_index];
 	}
+}
+
+uint64_t parse_steam_id_64(const std::string& id)
+{
+    // Очікується формат "0:Y:ZZZZZZZ"
+    if (id.empty()) return 0;
+    int iServer = 0, iAuthID = 0;
+    char szAuthID[64];
+    strncpy(szAuthID, id.c_str(), sizeof(szAuthID) - 1);
+    szAuthID[sizeof(szAuthID) - 1] = '\0';
+    char* szTmp = strtok(szAuthID, ":");
+    while (szTmp = strtok(NULL, ":")) {
+        char* szTmp2 = strtok(NULL, ":");
+        if (szTmp2) {
+            iServer = atoi(szTmp);
+            iAuthID = atoi(szTmp2);
+        }
+    }
+    if (iAuthID == 0) return 0;
+    uint64_t i64friendID = (long long)iAuthID * 2;
+    i64friendID += 76561197960265728 + iServer;
+    return i64friendID;
 }
