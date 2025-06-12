@@ -10,7 +10,6 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "forcemodel.h"
-#include "player_info.h"
 
 namespace steam_id
 {
@@ -108,29 +107,6 @@ namespace steam_id
 			}
 		}
 
-		// Функція для отримання SteamID з масиву або через CPlayerInfo
-		const std::string& get_steam_id(size_t player_index)
-		{
-			// Якщо вже є SteamID — повертаємо його
-			if (!steam_ids[player_index].empty())
-				return steam_ids[player_index];
-
-			// Fallback: пробуємо взяти SteamID з player_info.cpp
-			static std::string fallback;
-			const CPlayerInfo* info = GetPlayerInfoSafe(static_cast<int>(player_index + 1));
-			if (info && info->IsConnected()) {
-				const char* sid = info->GetSteamID();
-				if (sid && sid[0]) {
-					fallback = sid;
-					return fallback;
-				}
-			}
-
-			// Якщо нічого немає — повертаємо порожній рядок
-			static std::string empty;
-			return empty;
-		}
-
 		int msgfunc_AuthID(const char* name, int size, void* buf)
 		{
 			BEGIN_READ(buf, size);
@@ -139,13 +115,16 @@ namespace steam_id
 			auto id = READ_STRING();
 
 			if (slot >= 1 && slot <= MAX_PLAYERS) {
-				// Зберігаємо повний SteamID (наприклад, STEAM_0:1:12345678)
-				steam_ids[slot - 1] = id;
+				auto underscore = strchr(id, '_');
 
-				if (showing_real_names)
-					update_real_names();
+				if (underscore) {
+					steam_ids[slot - 1].assign(underscore + 1);
 
-				force_model::update_player_steam_id(slot - 1);
+					if (showing_real_names)
+						update_real_names();
+
+					force_model::update_player_steam_id(slot - 1);
+				}
 			}
 
 			return 1;
@@ -192,24 +171,7 @@ namespace steam_id
 
 	const std::string& get_steam_id(size_t player_index)
 	{
-		// Якщо вже є SteamID — повертаємо його
-		if (!steam_ids[player_index].empty())
-			return steam_ids[player_index];
-
-		// Fallback: пробуємо взяти SteamID з player_info.cpp
-		static std::string fallback;
-		const CPlayerInfo* info = GetPlayerInfoSafe(static_cast<int>(player_index + 1));
-		if (info && info->IsConnected()) {
-			const char* sid = info->GetSteamID();
-			if (sid && sid[0]) {
-				fallback = sid;
-				return fallback;
-			}
-		}
-
-		// Якщо нічого немає — повертаємо порожній рядок
-		static std::string empty;
-		return empty;
+		return steam_ids[player_index];
 	}
 
 	bool is_showing_real_names()
