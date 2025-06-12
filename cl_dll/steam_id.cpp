@@ -10,6 +10,7 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "forcemodel.h"
+#include "player_info.h"
 
 namespace steam_id
 {
@@ -107,6 +108,29 @@ namespace steam_id
 			}
 		}
 
+		// Функція для отримання SteamID з масиву або через CPlayerInfo
+		const std::string& get_steam_id(size_t player_index)
+		{
+			// Якщо вже є SteamID — повертаємо його
+			if (!steam_ids[player_index].empty())
+				return steam_ids[player_index];
+
+			// Fallback: пробуємо взяти SteamID з player_info.cpp
+			static std::string fallback;
+			const CPlayerInfo* info = GetPlayerInfoSafe(static_cast<int>(player_index + 1));
+			if (info && info->IsConnected()) {
+				const char* sid = info->GetSteamID();
+				if (sid && sid[0]) {
+					fallback = sid;
+					return fallback;
+				}
+			}
+
+			// Якщо нічого немає — повертаємо порожній рядок
+			static std::string empty;
+			return empty;
+		}
+
 		int msgfunc_AuthID(const char* name, int size, void* buf)
 		{
 			BEGIN_READ(buf, size);
@@ -115,16 +139,13 @@ namespace steam_id
 			auto id = READ_STRING();
 
 			if (slot >= 1 && slot <= MAX_PLAYERS) {
-				auto underscore = strchr(id, '_');
+				// Зберігаємо повний SteamID (наприклад, STEAM_0:1:12345678)
+				steam_ids[slot - 1] = id;
 
-				if (underscore) {
-					steam_ids[slot - 1].assign(id);
+				if (showing_real_names)
+					update_real_names();
 
-					if (showing_real_names)
-						update_real_names();
-
-					force_model::update_player_steam_id(slot - 1);
-				}
+				force_model::update_player_steam_id(slot - 1);
 			}
 
 			return 1;
@@ -169,14 +190,27 @@ namespace steam_id
 		gEngfuncs.pfnAddCommand("unloadauthid", callback_unloadauthid);
 	}
 
-
-  	const std::string& get_steam_id(size_t player_index)
+	const std::string& get_steam_id(size_t player_index)
 	{
-   	    static std::string empty;
-    	    if (player_index < MAX_PLAYERS)
-    	    return steam_ids[player_index];
-    	    return empty;
-  	}
+		// Якщо вже є SteamID — повертаємо його
+		if (!steam_ids[player_index].empty())
+			return steam_ids[player_index];
+
+		// Fallback: пробуємо взяти SteamID з player_info.cpp
+		static std::string fallback;
+		const CPlayerInfo* info = GetPlayerInfoSafe(static_cast<int>(player_index + 1));
+		if (info && info->IsConnected()) {
+			const char* sid = info->GetSteamID();
+			if (sid && sid[0]) {
+				fallback = sid;
+				return fallback;
+			}
+		}
+
+		// Якщо нічого немає — повертаємо порожній рядок
+		static std::string empty;
+		return empty;
+	}
 
 	bool is_showing_real_names()
 	{
