@@ -96,6 +96,8 @@ add_sources(
 	menu.cpp
 	message.cpp
 #	MOTD.cpp
+	mute.cpp
+ 	mute.h
 	rainbow.cpp
 	rainbow.h
 	saytext.cpp
