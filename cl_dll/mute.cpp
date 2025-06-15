@@ -57,23 +57,31 @@ void CVoiceMuteManager::MutePlayer(int iPlayer)
     char string[256];
     if (GetClientVoiceMgr()->IsPlayerBlocked(iPlayer))
     {
-        // Remove mute
         GetClientVoiceMgr()->SetPlayerBlockedState(iPlayer, false);
         
-        char string1[1024];
-        snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Unmuted"), pl_info->name);
-        snprintf(string, sizeof(string), "%c** %s\n", HUD_PRINTTALK, string1);
+        char string1[256]; // Зменшуємо розмір буфера
+        if(snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Unmuted"), pl_info->name) >= sizeof(string1)) {
+            return; // Захист від переповнення буфера
+        }
+        if(snprintf(string, sizeof(string), "%c** %s\n", HUD_PRINTTALK, string1) >= sizeof(string)) {
+            return;
+        }
     }
     else 
     {
-        // Mute the player
         GetClientVoiceMgr()->SetPlayerBlockedState(iPlayer, true);
         
-        char string1[1024];
-        char string2[1024];
-        snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Muted"), pl_info->name);
-        snprintf(string2, sizeof(string2), "%s", CHudTextMessage::BufferedLocaliseTextString("#No_longer_hear_that_player"));
-        snprintf(string, sizeof(string), "%c** %s %s\n", HUD_PRINTTALK, string1, string2);
+        char string1[256];
+        char string2[256];
+        if(snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Muted"), pl_info->name) >= sizeof(string1)) {
+            return;
+        }
+        if(snprintf(string2, sizeof(string2), "%s", CHudTextMessage::BufferedLocaliseTextString("#No_longer_hear_that_player")) >= sizeof(string2)) {
+            return;
+        }
+        if(snprintf(string, sizeof(string), "%c** %s %s\n", HUD_PRINTTALK, string1, string2) >= sizeof(string)) {
+            return;
+        }
     }
 
     gHUD.m_TextMessage.MsgFunc_TextMsg(NULL, strlen(string)+1, string);
@@ -98,9 +106,13 @@ void CVoiceMuteManager::UnmutePlayer(int iPlayer)
     GetClientVoiceMgr()->SetPlayerBlockedState(iPlayer, false);
     
     char string[256];
-    char string1[1024];
-    snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Unmuted"), pl_info->name);
-    snprintf(string, sizeof(string), "%c** %s\n", HUD_PRINTTALK, string1);
+    char string1[256];
+    if(snprintf(string1, sizeof(string1), CHudTextMessage::BufferedLocaliseTextString("#Unmuted"), pl_info->name) >= sizeof(string1)) {
+        return;
+    }
+    if(snprintf(string, sizeof(string), "%c** %s\n", HUD_PRINTTALK, string1) >= sizeof(string)) {
+        return;
+    }
 
     gHUD.m_TextMessage.MsgFunc_TextMsg(NULL, strlen(string)+1, string);
 }
