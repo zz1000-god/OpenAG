@@ -21,6 +21,11 @@ void UnmuteCommandHandler()
 // Конструктор з реєстрацією команд
 CVoiceMuteManager::CVoiceMuteManager()
 {
+    // Перевіряємо, чи engine functions доступні
+    if (!gEngfuncs.pfnAddCommand) {
+        return;
+    }
+
     // Реєструємо команди
     gEngfuncs.pfnAddCommand("cl_mute", MuteCommandHandler);
     gEngfuncs.pfnAddCommand("cl_unmute", UnmuteCommandHandler);
@@ -42,6 +47,12 @@ int CVoiceMuteManager::FindPlayerByName(const char* name)
 
 void CVoiceMuteManager::MutePlayer(int iPlayer)
 {
+    // Перевіряємо, чи Voice Manager ініціалізований
+    if (!GetClientVoiceMgr()) {
+        gEngfuncs.Con_Printf("Error: Voice Manager not initialized\n");
+        return;
+    }
+
     if (iPlayer <= 0 || iPlayer > MAX_PLAYERS)
         return;
         
@@ -82,6 +93,12 @@ void CVoiceMuteManager::MutePlayer(int iPlayer)
         if(snprintf(string, sizeof(string), "%c** %s %s\n", HUD_PRINTTALK, string1, string2) >= sizeof(string)) {
             return;
         }
+    }
+
+    // Безпечне використання TextMessage
+    if (!CHudTextMessage::BufferedLocaliseTextString("#Muted")) {
+        gEngfuncs.Con_Printf("Error: Cannot load localized string\n");
+        return;
     }
 
     gHUD.m_TextMessage.MsgFunc_TextMsg(NULL, strlen(string)+1, string);
