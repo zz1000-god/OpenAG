@@ -4,7 +4,6 @@
 #include <cctype>
 #include <cstdlib>
 #include "voice_status.h" // Важливо мати цей файл
-#include "hud.h"
 #include "cl_util.h"
 
 class CVoiceMuteManager
