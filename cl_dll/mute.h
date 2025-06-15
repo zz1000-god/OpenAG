@@ -1,6 +1,9 @@
 #ifndef MUTE_H
 #define MUTE_H
 
+#include <cctype> // для isdigit
+#include <cstdlib> // для atoi
+
 class CVoiceMuteManager
 {
 public:
