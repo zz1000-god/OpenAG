@@ -1,8 +1,11 @@
 #ifndef MUTE_H
 #define MUTE_H
 
-#include <cctype> // для isdigit
-#include <cstdlib> // для atoi
+#include <cctype>
+#include <cstdlib>
+#include "voice_status.h" // Важливо мати цей файл
+#include "hud.h"
+#include "cl_util.h"
 
 class CVoiceMuteManager
 {
