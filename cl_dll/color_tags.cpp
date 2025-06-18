@@ -3,7 +3,7 @@
 #include "hud.h"
 #include "cl_util.h"
 
-cl_colortext = CVAR_CREATE("cl_colortext", "1", FCVAR_ARCHIVE);
+extern cvar_t *cl_colortext;
 
 namespace color_tags {
 	namespace {
