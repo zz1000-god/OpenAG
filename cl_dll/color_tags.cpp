@@ -3,6 +3,15 @@
 #include "hud.h"
 #include "cl_util.h"
 
+cl_colortext = CVAR_CREATE("cl_colortext", "1", FCVAR_ARCHIVE);
+
+if (!cl_colortext || cl_colortext->value == 0) {
+	// Просто передаємо весь текст без змін
+	function(string, false, 255, 160, 0);
+	return;
+}
+
+
 namespace color_tags {
 	namespace {
 		// R, G, B.
@@ -23,7 +32,7 @@ namespace color_tags {
 			return;
 
 		for (; *src != '\0' && count > 1; ++src) {
-			if (src[0] == '^' && src[1] >= '0' && src[1] <= '9') {
+			if (cl_colortext && cl_colortext->value != 0 && src[0] == '^' && src[1] >= '0' && src[1] <= '9') {
 				++src;
 				continue;
 			} else {
