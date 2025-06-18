@@ -894,7 +894,19 @@ int CHudAmmo::Draw(float flTime)
 		SPR_Set(m_pWeapon->hInactive, r, g, b);
 		int spriteHeight = m_pWeapon->rcInactive.bottom - m_pWeapon->rcInactive.top;
 		int offset = spriteHeight - (spriteHeight / 8);
-		SPR_DrawAdditive(0, ScreenWidth / 1.73, y, &m_pWeapon->rcInactive);
+	
+		int x = ScreenWidth / 1.73;
+		int adjustedY = y;
+	
+		// Якщо нижня частина спрайту виходить за межі екрана — піднімаємо його
+		if (adjustedY + spriteHeight > ScreenHeight)
+		{
+			adjustedY = ScreenHeight - spriteHeight;
+			if (adjustedY < 0)
+				adjustedY = 0; // на випадок, якщо спрайт вищий за екран
+		}
+	
+		SPR_DrawAdditive(0, x, adjustedY, &m_pWeapon->rcInactive);
 	}
 
 	// Does weapon have any ammo at all?
