@@ -536,6 +536,7 @@ void CHud :: Init( void )
 	m_pShowServerTriggers = CVAR_CREATE("cl_show_server_triggers", "0", FCVAR_ARCHIVE);
 	m_pShowServerTriggersAlpha = CVAR_CREATE("cl_show_server_triggers_alpha", "120", FCVAR_ARCHIVE);
 	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
+	cl_colortext = CVAR_CREATE("cl_colortext", "1", FCVAR_ARCHIVE);
 	CVAR_CREATE("showtriggers", "0", 0);
 
 	m_pSpriteList = NULL;
