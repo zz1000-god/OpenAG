@@ -1,8 +1,6 @@
 #include "color_tags.h"
-
 #include "hud.h"
 #include "cl_util.h"
-
 extern cvar_t *cl_colortext;
 
 namespace color_tags {
@@ -20,44 +18,40 @@ namespace color_tags {
 		};
 	}
 
-	void strip_color_tags(char* dest, const char* src, size_t count) {
-		
-		if (!cl_colortext || cl_colortext->value == 0) {
-			// Просто передаємо весь текст без змін
-			function(string, false, 255, 160, 0);
-			return;
-		}		
+	bool are_color_tags_enabled() {
+		return cl_colortext && cl_colortext->value != 0;
+	}
 
+	void strip_color_tags(char* dest, const char* src, size_t count) {
 		if (count == 0)
 			return;
 
 		for (; *src != '\0' && count > 1; ++src) {
-			if (cl_colortext && cl_colortext->value != 0 && src[0] == '^' && src[1] >= '0' && src[1] <= '9') {
-				++src;
+			if (are_color_tags_enabled() && src[0] == '^' && src[1] >= '0' && src[1] <= '9') {
+				++src; // Пропускаємо color tag
 				continue;
 			} else {
 				*dest++ = *src;
 				--count;
 			}
 		}
-
 		*dest = '\0';
 	}
 
 	char* strip_color_tags_thread_unsafe(const char* string) {
 		static char buf[2048];
-
 		strip_color_tags(buf, string, ARRAYSIZE(buf));
-
 		return buf;
 	}
 
 	bool contains_color_tags(const char* string) {
+		if (!are_color_tags_enabled())
+			return false;
+
 		for (; *string != '\0'; ++string) {
 			if (string[0] == '^' && string[1] >= '0' && string[1] <= '9')
 				return true;
 		}
-
 		return false;
 	}
 
@@ -67,27 +61,30 @@ namespace color_tags {
 	                                                int r,
 	                                                int g,
 	                                                int b)> function) {
-		bool custom_color = false;
-		int r = 0, g = 0, b = 0;
-		char *temp = string;
+		// Якщо color tags вимкнені, просто передаємо весь текст без обробки
+		if (!are_color_tags_enabled()) {
+			function(string, false, 255, 160, 0); // Half-Life стандартний жовтий колір
+			return;
+		}
 
+		bool custom_color = false;
+		int r = 255, g = 160, b = 0; // Half-Life стандартний жовтий колір за замовчуванням
+		char *temp = string;
+		
 		while ((temp = strchr(temp, '^'))) {
 			char color_index = temp[1];
-
 			if (color_index >= '0' && color_index <= '9') {
 				if (temp != string) {
 					*temp = '\0';
-
 					function(string, custom_color, r, g, b);
-
 					*temp = '^';
 				}
-
 				string = temp + 2;
 				temp = temp + 2;
-
+				
 				if (color_index == '0' || color_index == '9') {
 					custom_color = false;
+					r = 255; g = 160; b = 0; // Half-Life стандартний жовтий
 				} else {
 					custom_color = true;
 					r = colors[color_index - '1'][0];
@@ -98,7 +95,7 @@ namespace color_tags {
 				++temp;
 			}
 		}
-
+		
 		if (string[0] != '\0')
 			function(string, custom_color, r, g, b);
 	}
