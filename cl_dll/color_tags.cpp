@@ -5,13 +5,6 @@
 
 cl_colortext = CVAR_CREATE("cl_colortext", "1", FCVAR_ARCHIVE);
 
-if (!cl_colortext || cl_colortext->value == 0) {
-	// Просто передаємо весь текст без змін
-	function(string, false, 255, 160, 0);
-	return;
-}
-
-
 namespace color_tags {
 	namespace {
 		// R, G, B.
@@ -28,6 +21,13 @@ namespace color_tags {
 	}
 
 	void strip_color_tags(char* dest, const char* src, size_t count) {
+		
+		if (!cl_colortext || cl_colortext->value == 0) {
+			// Просто передаємо весь текст без змін
+			function(string, false, 255, 160, 0);
+			return;
+		}		
+
 		if (count == 0)
 			return;
 
