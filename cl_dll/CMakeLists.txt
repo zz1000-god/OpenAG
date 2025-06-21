@@ -104,7 +104,6 @@ add_sources(
 	steam_id.cpp
 	steam_id.h
 	studio_util.cpp
- 	scoreboard.cpp
 	StudioModelRenderer.cpp
 	StudioModelRenderer.h
 	text_message.cpp
